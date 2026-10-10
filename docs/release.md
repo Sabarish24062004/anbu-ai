@@ -3,6 +3,60 @@
 Two parts ship separately: the **API** (Node + PostgreSQL, on a server you control) and the
 **mobile app** (built with EAS). Do them in this order: the app needs the API's public URL.
 
+## 0. Hosting on your own PC with Cloudflare Tunnel
+
+The API can run on the development PC and be reached from anywhere through a Cloudflare Tunnel:
+`cloudflared` connects out to Cloudflare, so no router ports or static IP are needed, and Cloudflare
+provides HTTPS. Reminders and push only work while the PC is on and awake, so set Windows to never
+sleep while plugged in (Settings → System → Power).
+
+In `services/api/.env` set `TRUST_PROXY_HOPS=1` (the tunnel is one proxy hop; without it every
+request looks like it comes from the tunnel and shares one rate limit).
+
+### Temporary address (no account, no domain)
+
+```bash
+npm run dev:api        # terminal 1
+npm run tunnel         # terminal 2: prints https://<random-words>.trycloudflare.com
+```
+
+Point the app at it when starting Expo (PowerShell):
+
+```powershell
+$env:EXPO_PUBLIC_API_URL = "https://<random-words>.trycloudflare.com"; npm run dev:mobile
+```
+
+The address changes every time the tunnel restarts, so this is for testing (e.g. your phone on
+mobile data), not for an installed build. A brand-new address can take a minute or two to resolve;
+Settings → Server status in the app shows whether it is reachable.
+
+While the API is public, anyone with the address can try to sign up: create your account, then
+set `REGISTRATION_OPEN=false` and restart the API.
+
+### Permanent address (needs a domain on Cloudflare)
+
+1. Add a domain to Cloudflare (buy it in Cloudflare Registrar, or move an existing domain's
+   nameservers to Cloudflare).
+2. `cloudflared tunnel login` (approve in the browser and pick the domain), then
+   `cloudflared tunnel create anbu-api` and
+   `cloudflared tunnel route dns anbu-api api.<your-domain>`.
+3. Create `%USERPROFILE%\.cloudflared\config.yml`:
+
+   ```yaml
+   tunnel: anbu-api
+   credentials-file: C:\Users\<you>\.cloudflared\<tunnel-id>.json
+   ingress:
+     - hostname: api.<your-domain>
+       service: http://localhost:4000
+     - service: http_status:404
+   ```
+
+4. Run it as a Windows service so it starts with the PC: `cloudflared service install` (from an
+   administrator terminal; see Cloudflare's docs for the current service options).
+5. Run the API itself on startup too (Task Scheduler or a service wrapper such as NSSM running
+   `npm run start -w @anbu/api` in the repository folder), with the production settings below.
+6. Set `EXPO_PUBLIC_API_URL=https://api.<your-domain>` for EAS builds (section 2).
+
 ## 1. API
 
 ### Requirements

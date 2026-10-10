@@ -66,6 +66,10 @@ To enable the assistant, add `GEMINI_API_KEY` (from https://aistudio.google.com/
 everything else works. With the key set, the Assistant tab also has a microphone button: tap, speak in
 Tamil or English, tap Send. Note the privacy terms of Gemini's free tier in `.env.example`.
 
+To reach the API from outside your Wi-Fi (e.g. a phone on mobile data), run `npm run tunnel` for a
+temporary Cloudflare HTTPS address and start Expo with `EXPO_PUBLIC_API_URL` set to it; see
+[docs/release.md](docs/release.md#0-hosting-on-your-own-pc-with-cloudflare-tunnel).
+
 The app finds the API automatically at the dev computer's LAN IP on port 4000. To use a different
 API, set `EXPO_PUBLIC_API_URL` before starting Expo. On Windows, allow Node.js through the firewall
 on private networks the first time, otherwise the phone cannot reach the API.
