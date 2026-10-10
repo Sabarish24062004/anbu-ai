@@ -5,3 +5,4 @@ coverage
 package-lock.json
 services/api/src/generated
 services/api/prisma/migrations
+apps/mobile/expo-env.d.ts
