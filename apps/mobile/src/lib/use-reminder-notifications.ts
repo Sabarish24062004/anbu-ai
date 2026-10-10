@@ -1,21 +1,68 @@
+import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
+import { api } from './api';
+import { ApiError } from './api-error';
 import { Platform } from 'react-native';
 import { addDays, startOfToday, toLocalDateString } from './datetime';
 import {
+  ACTION_DONE,
+  ACTION_SNOOZE,
   getPermission,
   requestPermission,
   scheduleDailyBrief,
   scheduleReminders,
+  setupReminderActions,
+  SNOOZE_MINUTES,
+  snoozeLocally,
 } from './notifications';
 import { registerForPush } from './push';
-import { useDayPlan, useMe, useUpcomingReminders } from './queries';
+import { keys, useDayPlan, useMe, useUpcomingReminders } from './queries';
 import { useSession, useT } from './session-context';
 
-function openFromNotification(response: Notifications.NotificationResponse) {
-  const path = response.notification.request.content.data?.['path'];
-  if (typeof path === 'string' && path.startsWith('/')) router.push(path as never);
+type ReminderData = { path?: string; reminderId?: string; sourceType?: string; sourceId?: string };
+
+/**
+ * Acts on a tapped notification: a plain tap opens the related screen; Done completes a task (or
+ * acknowledges an event/date reminder); Snooze asks the server to remind again, and falls back to
+ * a local re-alert when the server cannot (offline, or not yet marked as sent).
+ */
+async function handleResponse(
+  response: Notifications.NotificationResponse,
+  queryClient: QueryClient,
+) {
+  const content = response.notification.request.content;
+  const data = (content.data ?? {}) as ReminderData;
+  const refresh = () =>
+    Promise.all(
+      [keys.reminders, keys.tasks, keys.events].map((queryKey) =>
+        queryClient.invalidateQueries({ queryKey }),
+      ),
+    );
+
+  if (response.actionIdentifier === ACTION_DONE && data.reminderId) {
+    try {
+      if (data.sourceType === 'task' && data.sourceId) await api.completeTask(data.sourceId);
+      await api.acknowledgeReminder(data.reminderId, 'COMPLETED');
+    } catch {
+      // Still open the item so the user can finish it by hand.
+      if (data.path) router.push(data.path as never);
+    }
+    await refresh();
+    return;
+  }
+  if (response.actionIdentifier === ACTION_SNOOZE && data.reminderId) {
+    try {
+      await api.snoozeReminder(data.reminderId, SNOOZE_MINUTES);
+      await refresh(); // the next sync schedules it again
+    } catch (e) {
+      if (e instanceof ApiError && e.kind === 'http' && e.status === 404) return;
+      await snoozeLocally(content, SNOOZE_MINUTES);
+    }
+    return;
+  }
+  if (typeof data.path === 'string' && data.path.startsWith('/')) router.push(data.path as never);
 }
 
 /**
@@ -28,6 +75,23 @@ export function useReminderNotifications() {
   const { language } = useSession();
   const upcoming = useUpcomingReminders();
   const asked = useRef(false);
+  const queryClient = useQueryClient();
+  // The same response can arrive from both the launch hook and the listener: act once.
+  const handled = useRef(new Set<string>());
+  const onResponse = (response: Notifications.NotificationResponse) => {
+    const id = `${response.notification.request.identifier}:${response.notification.date}:${response.actionIdentifier}`;
+    if (handled.current.has(id)) return;
+    handled.current.add(id);
+    void handleResponse(response, queryClient);
+  };
+  const onResponseRef = useRef(onResponse);
+  useEffect(() => {
+    onResponseRef.current = onResponse;
+  });
+
+  useEffect(() => {
+    void setupReminderActions(t).catch(() => undefined);
+  }, [t]);
 
   // The next morning brief: today's wake time if still ahead, otherwise tomorrow's.
   const me = useMe();
@@ -69,14 +133,16 @@ export function useReminderNotifications() {
   const last = Notifications.useLastNotificationResponse();
   useEffect(() => {
     if (!last) return;
-    openFromNotification(last);
+    onResponseRef.current(last);
     void Notifications.clearLastNotificationResponseAsync();
   }, [last]);
 
   // Taps while the app is running or in the background.
   useEffect(() => {
     if (Platform.OS === 'web') return;
-    const sub = Notifications.addNotificationResponseReceivedListener(openFromNotification);
+    const sub = Notifications.addNotificationResponseReceivedListener((r) =>
+      onResponseRef.current(r),
+    );
     return () => sub.remove();
   }, []);
 }

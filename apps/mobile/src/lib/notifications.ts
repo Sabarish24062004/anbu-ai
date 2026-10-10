@@ -2,9 +2,16 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import type { DayPlanDto, Language, ReminderDto } from '@anbu/shared';
 import type { Strings } from '@/i18n/strings';
-import { formatTime } from './datetime';
+import { briefBody, pathFor, reminderBody } from './reminder-text';
+
+export { briefBody, pathFor, reminderBody };
 
 const CHANNEL_ID = 'reminders';
+/** Reminder notifications carry Done and Snooze buttons (same id in server push messages). */
+export const REMINDER_CATEGORY = 'reminder';
+export const ACTION_DONE = 'done';
+export const ACTION_SNOOZE = 'snooze';
+export const SNOOZE_MINUTES = 10;
 const MAX_SCHEDULED = 60; // iOS keeps at most 64 pending local notifications per app
 const MIN_LEAD_MS = 5_000;
 
@@ -36,6 +43,40 @@ function toState(status: Notifications.NotificationPermissionsStatus): Permissio
   return status.canAskAgain ? 'undetermined' : 'denied';
 }
 
+/**
+ * Registers the Done / Snooze buttons in the user's language. Both open the app: with the app
+ * closed, a button that does not open it never reaches the app (an Expo Notifications limit).
+ */
+export async function setupReminderActions(t: Strings) {
+  if (Platform.OS === 'web') return;
+  await Notifications.setNotificationCategoryAsync(REMINDER_CATEGORY, [
+    { identifier: ACTION_DONE, buttonTitle: t.notifDone, options: { opensAppToForeground: true } },
+    {
+      identifier: ACTION_SNOOZE,
+      buttonTitle: t.snooze(SNOOZE_MINUTES),
+      options: { opensAppToForeground: true },
+    },
+  ]);
+}
+
+/** Shows the same reminder again in a few minutes, on this phone only (works offline). */
+export async function snoozeLocally(content: Notifications.NotificationContent, minutes: number) {
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: content.title,
+      body: content.body,
+      data: content.data,
+      sound: true,
+      categoryIdentifier: REMINDER_CATEGORY,
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: new Date(Date.now() + minutes * 60_000),
+      channelId: CHANNEL_ID,
+    },
+  });
+}
+
 export async function getPermission(): Promise<PermissionState> {
   if (Platform.OS === 'web') return 'denied';
   await ensureChannel();
@@ -46,32 +87,6 @@ export async function requestPermission(): Promise<PermissionState> {
   if (Platform.OS === 'web') return 'denied';
   await ensureChannel();
   return toState(await Notifications.requestPermissionsAsync());
-}
-
-/** The app route a reminder opens when tapped. */
-export function pathFor(r: ReminderDto): string {
-  switch (r.source.type) {
-    case 'event':
-      return `/event/${r.source.id}`;
-    case 'task':
-      return `/task/${r.source.id}`;
-    case 'importantDate':
-      return `/date/${r.source.id}`;
-  }
-}
-
-export function reminderBody(r: ReminderDto, t: Strings, lang: Language): string {
-  switch (r.source.type) {
-    case 'event':
-      if (r.source.dateOnly) return t.reminderDateBody(Math.round(r.offsetMinutes / 1440));
-      return r.offsetMinutes === 0
-        ? t.reminderEventNow
-        : t.reminderEventBody(formatTime(r.occurrenceAt, lang));
-    case 'task':
-      return t.reminderTaskBody(formatTime(r.occurrenceAt, lang));
-    case 'importantDate':
-      return t.reminderDateBody(Math.round(r.offsetMinutes / 1440));
-  }
 }
 
 /**
@@ -91,8 +106,14 @@ export async function scheduleReminders(reminders: ReminderDto[], t: Strings, la
       content: {
         title: r.source.title,
         body: reminderBody(r, t, lang),
-        data: { path: pathFor(r), reminderId: r.id },
+        data: {
+          path: pathFor(r),
+          reminderId: r.id,
+          sourceType: r.source.type,
+          sourceId: r.source.id,
+        },
         sound: true,
+        categoryIdentifier: REMINDER_CATEGORY,
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -104,17 +125,6 @@ export async function scheduleReminders(reminders: ReminderDto[], t: Strings, la
 }
 
 const BRIEF_ID = 'daily-brief';
-
-/** One-line summary of a day plan, e.g. "3 events, first at 9:00 · 2 tasks to fit in". */
-export function briefBody(plan: DayPlanDto, t: Strings, lang: Language): string {
-  const first = plan.events[0];
-  const parts = [t.briefEvents(plan.events.length, first ? formatTime(first.start, lang) : '')];
-  const tasks = plan.suggestions.length + plan.unscheduled.length;
-  if (tasks) parts.push(t.briefTasks(tasks));
-  const date = plan.importantDates[0];
-  if (date && date.daysUntil <= 1) parts.push(t.briefDate(date.title, date.daysUntil));
-  return parts.join(' · ');
-}
 
 /**
  * Schedules the morning brief for `at` with the plan for that day. Call after scheduleReminders,

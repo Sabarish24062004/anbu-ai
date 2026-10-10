@@ -266,6 +266,17 @@ reports `voice`.
 - Assistant tools `skip_occurrence` / `move_occurrence` (a clashing move asks first). Verified live:
   "Skip gym this Friday" and a Tamil "move this Sunday's gym to 8 am" changed only those days.
 
+## Notification actions and app tests (Phase 9)
+
+- Reminder notifications (local and push) carry **Done** and **Snooze 10 min** buttons
+  (category `reminder`). Done completes a task (or acknowledges an event/date reminder); Snooze asks
+  the server to remind again and, when it cannot (offline, or the reminder not yet marked sent),
+  re-alerts locally. Both buttons open the app: Expo drops button taps when the app was closed and
+  the button does not open it.
+- The app's pure logic (date formatting, reminder and brief wording, error messages, translation
+  completeness) lives in modules without React Native imports and is unit tested with Vitest;
+  `npm test` runs API and app tests, and CI runs both.
+
 ## Milestone plan
 
 0. Discovery ✅
@@ -277,3 +288,4 @@ reports `voice`.
 6. Memory + daily planning ✅
 7. Hardening + release ✅ (store submission pending: needs EAS account, icons, privacy policy)
 8. One-off changes to repeating events ✅
+9. Notification actions + app unit tests ✅

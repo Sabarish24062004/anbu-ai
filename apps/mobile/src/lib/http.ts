@@ -1,19 +1,10 @@
 import type { ApiErrorBody } from '@anbu/shared';
+import { ApiError } from './api-error';
 import { getApiBaseUrl } from './config';
 
-const REQUEST_TIMEOUT_MS = 10_000;
+export { ApiError };
 
-export class ApiError extends Error {
-  constructor(
-    message: string,
-    readonly kind: 'network' | 'timeout' | 'http' | 'invalid_response',
-    readonly status?: number,
-    readonly code?: string,
-    readonly details?: unknown,
-  ) {
-    super(message);
-  }
-}
+const REQUEST_TIMEOUT_MS = 10_000;
 
 export interface RawResponse {
   status: number;

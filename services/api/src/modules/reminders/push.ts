@@ -55,19 +55,29 @@ export async function pushContent(prisma: PrismaClient, reminder: Reminder) {
       : r.offsetMinutes === 0
         ? t.startingNow
         : t.startsAt(time(r.event.timezone));
-    return { title: r.event.title, body, path: `/event/${r.event.id}` };
+    return {
+      title: r.event.title,
+      body,
+      path: `/event/${r.event.id}`,
+      sourceType: 'event',
+      sourceId: r.event.id,
+    };
   }
   if (r.task) {
     return {
       title: r.task.title,
       body: t.dueAt(time(r.task.timezone)),
       path: `/task/${r.task.id}`,
+      sourceType: 'task',
+      sourceId: r.task.id,
     };
   }
   return {
     title: r.importantDate!.title,
     body: t.inDays(days),
     path: `/date/${r.importantDate!.id}`,
+    sourceType: 'importantDate',
+    sourceId: r.importantDate!.id,
   };
 }
 
@@ -89,7 +99,7 @@ export function createExpoPushChannel(opts: {
       });
       if (!devices.length) return 'skipped';
 
-      const { title, body, path } = await pushContent(prisma, reminder);
+      const { title, body, path, sourceType, sourceId } = await pushContent(prisma, reminder);
       // Keep trying to deliver until shortly after the occurrence, then let it go.
       const ttl = Math.max(
         60,
@@ -99,7 +109,8 @@ export function createExpoPushChannel(opts: {
         to: d.pushToken,
         title,
         body,
-        data: { path, reminderId: reminder.id },
+        data: { path, reminderId: reminder.id, sourceType, sourceId },
+        categoryId: 'reminder', // Done / Snooze buttons, registered by the app
         sound: 'default',
         priority: 'high',
         channelId: 'reminders',

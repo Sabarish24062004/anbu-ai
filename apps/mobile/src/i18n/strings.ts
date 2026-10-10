@@ -166,6 +166,7 @@ const en = {
     'This phone has no Tamil voice, so Tamil replies are shown but not read aloud. You can add one in the phone’s text-to-speech settings.',
   // Reminders
   dueNow: 'Due now',
+  notifDone: 'Done',
   gotIt: 'Got it',
   snooze: (n: number) => `Snooze ${n} min`,
   reminderEventBody: (time: string) => `Starts at ${time}`,
@@ -365,6 +366,7 @@ const ta: Strings = {
   noTamilVoice:
     'இந்த தொலைபேசியில் தமிழ் குரல் இல்லை; தமிழ் பதில்கள் காட்டப்படும், வாசிக்கப்படாது. தொலைபேசியின் உரை-பேச்சு அமைப்புகளில் சேர்க்கலாம்.',
   dueNow: 'இப்போது',
+  notifDone: 'முடிந்தது',
   gotIt: 'சரி',
   snooze: (n: number) => `${n} நிமிடம் கழித்து`,
   reminderEventBody: (time: string) => `${time}க்குத் தொடங்கும்`,

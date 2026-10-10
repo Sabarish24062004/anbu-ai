@@ -20,6 +20,7 @@ Architecture and decisions: [docs/architecture.md](docs/architecture.md). Deploy
 | 6. Memory, day planning, morning brief                                | ✅ Built — needs on-device testing                |
 | 7. Hardening + release prep (limits, account export/delete, push, CI) | ✅ Built — see [docs/release.md](docs/release.md) |
 | 8. Skip or move one occurrence of a repeating event                   | ✅ Built                                          |
+| 9. Done/Snooze on notifications, app unit tests                       | ✅ Built                                          |
 
 ## Repository layout
 
