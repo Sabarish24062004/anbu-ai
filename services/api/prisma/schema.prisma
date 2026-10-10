@@ -1,0 +1,387 @@
+// Anbu AI database schema.
+// Conventions:
+// - All instants are stored as timestamptz (UTC). Each schedulable record also stores the IANA
+//   timezone it was created in, so local wall-clock time (and recurrence across DST) is derived
+//   from (startAt, timezone, rrule) instead of being stored redundantly.
+// - Every user-owned table has userId and is always queried scoped to the authenticated user.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Language {
+  ta
+  en
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum EventKind {
+  FIXED // appointment that must not move
+  FLEXIBLE // can be rescheduled by the planner (with user approval)
+}
+
+enum EventStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ImportantDateType {
+  BIRTHDAY
+  ANNIVERSARY
+  MILESTONE
+  FESTIVAL
+  CUSTOM
+}
+
+enum ReminderStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+enum ReminderAcknowledgement {
+  COMPLETED
+  DISMISSED
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  TOOL
+  SYSTEM
+}
+
+enum MemorySource {
+  USER_STATED // the user said it explicitly
+  USER_CONFIRMED // suggested by the assistant, then confirmed by the user
+}
+
+enum DevicePlatform {
+  IOS
+  ANDROID
+  WEB
+}
+
+enum DeliveryChannel {
+  LOCAL
+  PUSH
+  IN_APP
+}
+
+enum DeliveryResult {
+  SUCCESS
+  FAILURE
+}
+
+model User {
+  id           String    @id @default(uuid(7)) @db.Uuid
+  email        String    @unique // stored lower-cased
+  passwordHash String
+  displayName  String?
+  timezone     String    @default("Asia/Kolkata") // IANA identifier
+  language     Language  @default(ta)
+  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt    DateTime? @db.Timestamptz(3)
+
+  preference      UserPreference?
+  refreshTokens   RefreshToken[]
+  conversations   Conversation[]
+  messages        ConversationMessage[]
+  memories        Memory[]
+  events          Event[]
+  tasks           Task[]
+  importantDates  ImportantDate[]
+  reminders       Reminder[]
+  devices         NotificationDevice[]
+  auditLogs       AuditLog[]
+  idempotencyKeys IdempotencyKey[]
+}
+
+model UserPreference {
+  userId                     String   @id @db.Uuid
+  defaultReminderLeadMinutes Int      @default(15)
+  // Times of day as minutes after local midnight (e.g. 540 = 09:00).
+  workStartMinutes           Int?
+  workEndMinutes             Int?
+  workDays                   Int[]    @default([1, 2, 3, 4, 5]) // ISO weekdays, 1 = Monday
+  wakeMinutes                Int?
+  sleepMinutes               Int?
+  importantDateNotifyMinutes Int      @default(540) // time of day for birthday reminders
+  voiceResponsesEnabled      Boolean  @default(true)
+  updatedAt                  DateTime @updatedAt @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid(7)) @db.Uuid
+  userId     String    @db.Uuid
+  tokenHash  String    @unique // SHA-256 of the opaque token; the raw token is never stored
+  familyId   String    @db.Uuid // rotation family, revoked as a whole on reuse
+  expiresAt  DateTime  @db.Timestamptz(3)
+  revokedAt  DateTime? @db.Timestamptz(3)
+  replacedBy String?   @db.Uuid
+  userAgent  String?
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+}
+
+model Conversation {
+  id         String    @id @default(uuid(7)) @db.Uuid
+  userId     String    @db.Uuid
+  title      String?
+  language   Language  @default(ta)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime  @updatedAt @db.Timestamptz(3)
+  archivedAt DateTime? @db.Timestamptz(3)
+
+  user     User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ConversationMessage[]
+
+  @@index([userId, updatedAt])
+}
+
+model ConversationMessage {
+  id             String      @id @default(uuid(7)) @db.Uuid
+  conversationId String      @db.Uuid
+  userId         String      @db.Uuid
+  role           MessageRole
+  content        String
+  language       Language?
+  toolName       String?
+  toolPayload    Json?
+  createdAt      DateTime    @default(now()) @db.Timestamptz(3)
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@index([userId])
+}
+
+model Memory {
+  id          String       @id @default(uuid(7)) @db.Uuid
+  userId      String       @db.Uuid
+  key         String // e.g. "wake_time", "exercise_schedule"
+  value       String
+  category    String?
+  source      MemorySource
+  isSensitive Boolean      @default(false)
+  createdAt   DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime     @updatedAt @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+}
+
+model Event {
+  id                  String      @id @default(uuid(7)) @db.Uuid
+  userId              String      @db.Uuid
+  title               String
+  description         String?
+  // For recurring events startAt/endAt are the first occurrence.
+  startAt             DateTime    @db.Timestamptz(3)
+  endAt               DateTime?   @db.Timestamptz(3)
+  allDay              Boolean     @default(false)
+  timezone            String // IANA identifier the local wall-clock time belongs to
+  rrule               String? // RFC 5545 RRULE, expanded in `timezone`
+  kind                EventKind   @default(FIXED)
+  location            String?
+  category            String?
+  priority            Priority    @default(MEDIUM)
+  personName          String?
+  status              EventStatus @default(SCHEDULED)
+  travelBufferMinutes Int         @default(0)
+  prepBufferMinutes   Int         @default(0)
+  remindersEnabled    Boolean     @default(true)
+  reminderOffsets     Int[]       @default([15]) // minutes before start
+  completedAt         DateTime?   @db.Timestamptz(3)
+  cancelledAt         DateTime?   @db.Timestamptz(3)
+  createdAt           DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime    @updatedAt @db.Timestamptz(3)
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reminders Reminder[]
+
+  @@index([userId, startAt])
+  @@index([userId, status])
+}
+
+model Task {
+  id               String     @id @default(uuid(7)) @db.Uuid
+  userId           String     @db.Uuid
+  title            String
+  description      String?
+  dueAt            DateTime?  @db.Timestamptz(3)
+  timezone         String
+  priority         Priority   @default(MEDIUM)
+  estimatedMinutes Int?
+  category         String?
+  status           TaskStatus @default(PENDING)
+  rrule            String?
+  blockedById      String?    @db.Uuid
+  remindersEnabled Boolean    @default(true)
+  reminderOffsets  Int[]      @default([15]) // minutes before dueAt
+  completedAt      DateTime?  @db.Timestamptz(3)
+  createdAt        DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime   @updatedAt @db.Timestamptz(3)
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  blockedBy Task?      @relation("TaskDependency", fields: [blockedById], references: [id], onDelete: SetNull)
+  blocking  Task[]     @relation("TaskDependency")
+  reminders Reminder[]
+
+  @@index([userId, status, dueAt])
+}
+
+model ImportantDate {
+  id               String            @id @default(uuid(7)) @db.Uuid
+  userId           String            @db.Uuid
+  title            String // e.g. "Karthik's birthday"
+  type             ImportantDateType
+  personName       String?
+  relationship     String?
+  month            Int // 1-12
+  day              Int // 1-31
+  year             Int? // original year if known (e.g. birth year)
+  recursAnnually   Boolean           @default(true)
+  timezone         String
+  contactInfo      String?
+  notes            String?
+  remindersEnabled Boolean           @default(true)
+  // Minutes before the occasion's notify time (UserPreference.importantDateNotifyMinutes).
+  // 1440 = previous day, 0 = on the day.
+  reminderOffsets  Int[]             @default([1440, 0])
+  createdAt        DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime          @updatedAt @db.Timestamptz(3)
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reminders Reminder[]
+
+  @@index([userId, month, day])
+}
+
+// A concrete reminder trigger for one occurrence of an event, task or important date.
+// Exactly one of eventId / taskId / importantDateId is set (enforced by a CHECK constraint).
+model Reminder {
+  id              String                   @id @default(uuid(7)) @db.Uuid
+  userId          String                   @db.Uuid
+  eventId         String?                  @db.Uuid
+  taskId          String?                  @db.Uuid
+  importantDateId String?                  @db.Uuid
+  offsetMinutes   Int
+  occurrenceAt    DateTime                 @db.Timestamptz(3) // start of the occurrence this reminds about
+  triggerAt       DateTime                 @db.Timestamptz(3)
+  status          ReminderStatus           @default(PENDING)
+  attemptCount    Int                      @default(0)
+  lastError       String?
+  jobId           String? // durable scheduler job id
+  sentAt          DateTime?                @db.Timestamptz(3)
+  snoozeCount     Int                      @default(0)
+  acknowledgement ReminderAcknowledgement?
+  acknowledgedAt  DateTime?                @db.Timestamptz(3)
+  createdAt       DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime                 @updatedAt @db.Timestamptz(3)
+
+  user          User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event         Event?                    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  task          Task?                     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  importantDate ImportantDate?            @relation(fields: [importantDateId], references: [id], onDelete: Cascade)
+  attempts      ReminderDeliveryAttempt[]
+
+  @@unique([eventId, occurrenceAt, offsetMinutes])
+  @@unique([taskId, occurrenceAt, offsetMinutes])
+  @@unique([importantDateId, occurrenceAt, offsetMinutes])
+  @@index([status, triggerAt])
+  @@index([userId, triggerAt])
+}
+
+model ReminderDeliveryAttempt {
+  id          String          @id @default(uuid(7)) @db.Uuid
+  reminderId  String          @db.Uuid
+  channel     DeliveryChannel
+  result      DeliveryResult
+  deviceId    String?         @db.Uuid
+  error       String?
+  attemptedAt DateTime        @default(now()) @db.Timestamptz(3)
+
+  reminder Reminder            @relation(fields: [reminderId], references: [id], onDelete: Cascade)
+  device   NotificationDevice? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+
+  @@index([reminderId])
+}
+
+model NotificationDevice {
+  id               String         @id @default(uuid(7)) @db.Uuid
+  userId           String         @db.Uuid
+  platform         DevicePlatform
+  pushToken        String?        @unique
+  deviceName       String?
+  permissionStatus String? // granted | denied | undetermined, as last reported by the app
+  lastSeenAt       DateTime       @default(now()) @db.Timestamptz(3)
+  createdAt        DateTime       @default(now()) @db.Timestamptz(3)
+  revokedAt        DateTime?      @db.Timestamptz(3)
+
+  user     User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attempts ReminderDeliveryAttempt[]
+
+  @@index([userId])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  userId     String?  @db.Uuid
+  action     String // e.g. "event.create", "event.cancel"
+  entityType String
+  entityId   String?  @db.Uuid
+  metadata   Json?
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+}
+
+// Deduplicates retried mutating requests (e.g. a voice command sent twice).
+model IdempotencyKey {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  userId         String   @db.Uuid
+  key            String
+  requestHash    String
+  responseStatus Int?
+  responseBody   Json?
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  expiresAt      DateTime @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@index([expiresAt])
+}
