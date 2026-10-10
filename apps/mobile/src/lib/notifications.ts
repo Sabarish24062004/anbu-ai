@@ -1,4 +1,4 @@
-import * as Notifications from 'expo-notifications';
+import * as Notifications from './expo-notifications';
 import { Platform } from 'react-native';
 import type { DayPlanDto, Language, ReminderDto } from '@anbu/shared';
 import type { Strings } from '@/i18n/strings';

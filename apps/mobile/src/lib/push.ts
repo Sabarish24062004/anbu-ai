@@ -1,5 +1,5 @@
+import { isRunningInExpoGo } from 'expo';
 import Constants from 'expo-constants';
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { api } from './api';
 
@@ -17,10 +17,15 @@ const projectId = (): string | undefined =>
  */
 export async function registerForPush(): Promise<boolean> {
   if (Platform.OS !== 'ios' && Platform.OS !== 'android') return false;
+  // Expo Go cannot receive remote push (and on Android its push code throws when loaded).
+  if (isRunningInExpoGo()) return false;
   const id = projectId();
   if (!id) return false;
   try {
-    const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId: id });
+    // Loaded on demand: this module pulls in expo-notifications' push-token side effects.
+    const { getExpoPushTokenAsync } =
+      await import('expo-notifications/build/getExpoPushTokenAsync');
+    const { data: token } = await getExpoPushTokenAsync({ projectId: id });
     await api.registerDevice({
       platform: Platform.OS === 'ios' ? 'IOS' : 'ANDROID',
       pushToken: token,
