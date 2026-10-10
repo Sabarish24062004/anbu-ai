@@ -32,6 +32,10 @@ export default function TabsLayout() {
         options={{ title: t.tabAgenda, tabBarIcon: icon('calendar-outline') }}
       />
       <Tabs.Screen
+        name="assistant"
+        options={{ title: t.tabAssistant, tabBarIcon: icon('chatbubbles-outline') }}
+      />
+      <Tabs.Screen
         name="tasks"
         options={{ title: t.tabTasks, tabBarIcon: icon('checkbox-outline') }}
       />

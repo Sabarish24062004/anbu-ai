@@ -6,14 +6,16 @@ import { createApp } from '../src/app';
 import { createLogger } from '../src/common/logger';
 import { loadEnv } from '../src/config/env';
 import { createPrismaClient, type PrismaClient } from '../src/database/prisma';
+import type { LlmProvider } from '../src/modules/assistant/llm/types';
 
 export const TEST_EMAIL_DOMAIN = '@example.test';
 export const TEST_PASSWORD = 'correct horse battery staple';
 
-export function buildTestApp(overrides: { databaseUrl?: string } = {}) {
+export function buildTestApp(overrides: { databaseUrl?: string; llm?: LlmProvider | null } = {}) {
   const env = loadEnv();
   const prisma = createPrismaClient(overrides.databaseUrl ?? env.DATABASE_URL);
-  const app = createApp({ env, prisma, logger: createLogger('silent') });
+  const logger = createLogger('silent');
+  const app = createApp({ env, prisma, logger, llm: overrides.llm ?? null });
   return { app, prisma, env };
 }
 

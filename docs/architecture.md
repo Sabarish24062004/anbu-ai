@@ -117,13 +117,54 @@ body replays the stored response (`Idempotent-Replayed: true`), a different body
   looked right. Every connection now runs with `TimeZone=UTC`; a regression test checks the stored
   value and `now()` agree.
 
+## Assistant (Phase 4)
+
+| Route                                                             | Notes                                                 |
+| ----------------------------------------------------------------- | ----------------------------------------------------- |
+| `GET /assistant/status`                                           | `{ available }`: whether a model is configured        |
+| `POST /assistant/messages`                                        | `{ conversationId?, text }` → reply, actions, pending |
+| `GET /assistant/conversations/latest` · `/:id`                    | Messages and any action awaiting confirmation         |
+| `POST /assistant/conversations/:id/pending/:pid/confirm\|decline` | Answer a confirmation card (no model involved)        |
+
+Turn flow: load history (last 12 messages) → model call with a whitelisted tool set → each tool call
+is validated with the same zod schemas as the REST API and runs through the same services, scoped to
+the signed-in user → results go back to the model → final text. The user message, tool calls,
+pending confirmation and reply are stored in one transaction.
+
+### Phase 4 decisions
+
+- **Provider: Gemini free tier, chosen knowingly.** Google's terms for unpaid use allow prompts and
+  responses to be used to improve its products and read by human reviewers, and ask users not to
+  submit personal information. The assistant sends schedules, tasks and names. The user accepted this
+  (2026-10-10); the app shows a short notice under the chat box. Switching to a billing-enabled key
+  removes it without code changes. The provider sits behind `LlmProvider`, so another model is one
+  adapter.
+- **Interactions API, stateless** (`store: false`), as the current function-calling docs describe.
+  Model steps are sent back exactly as received, so thought signatures stay valid. Default model
+  `gemini-3.5-flash-lite` (fast and cheap; `GEMINI_MODEL` to change).
+- **Tools, not free text.** The model can only call: `get_agenda`, `search_events`, `create_event`,
+  `update_event`, `cancel_event`, `list_tasks`, `create_task`, `complete_task`,
+  `create_important_date`, `list_upcoming_dates`. It cannot delete anything. Unknown tools, invalid
+  arguments and ids belonging to other users come back to the model as errors.
+- **Confirmation before risk.** Cancelling, and saving over a clash, become a pending action (30 min
+  TTL) that the user confirms by button or by saying yes (`confirm_pending_action`). Confirming twice
+  applies it once.
+- **Truthful replies.** Every reply carries `actions` built from service results. If the model fails
+  after making changes, the reply is a fixed Tamil/English account of those changes; if it fails
+  before, nothing is stored and the API returns 503 (`ASSISTANT_UNAVAILABLE` / `ASSISTANT_BUSY`).
+- **Limits.** 2,000 characters per message, 6 model calls and 8 tool calls per step per turn,
+  30 s per model request. Tool results are marked as data in the prompt so text inside event titles
+  cannot instruct the model.
+- **Not yet:** deterministic Tamil/Tanglish date extraction before the model (the model resolves
+  relative dates from the current local time it is given), streaming replies, voice (Phase 5).
+
 ## Milestone plan
 
 0. Discovery ✅
 1. Foundation: monorepo, lint/format, Prisma schema + migration, env, /health, mobile ↔ API check
 2. Auth + events/tasks/important dates + conflicts + timezone tests
 3. Reminders (worker, restart recovery, dedupe, local notifications) ✅
-4. Assistant tool-calling
+4. Assistant tool-calling ✅
 5. Tamil/English voice
 6. Memory + daily planning
 7. Hardening + release

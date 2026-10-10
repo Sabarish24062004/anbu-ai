@@ -103,6 +103,21 @@ const en = {
   checking: 'Checking connection…',
   connected: (v: string) => `Connected · v${v} · database ok`,
   dbDown: 'Server reachable, but the database is unavailable.',
+  // Assistant
+  tabAssistant: 'Assistant',
+  assistantPlaceholder: 'Ask or tell me something…',
+  assistantHint: 'Try: “Add gym tomorrow at 7 am” or “What do I have on Friday?”',
+  send: 'Send',
+  newChat: 'New chat',
+  thinking: 'Thinking…',
+  confirm: 'Yes, do it',
+  notNow: 'No',
+  clashesWith: 'Clashes with',
+  assistantUnavailable:
+    'The assistant is not set up on the server yet (no model key). Everything else still works.',
+  assistantBusy: 'The assistant is busy right now. Please try again in a minute.',
+  assistantPrivacy:
+    'Messages are processed by Google Gemini (free tier). Google may review them; avoid sharing anything very sensitive.',
   // Reminders
   dueNow: 'Due now',
   gotIt: 'Got it',
@@ -229,6 +244,21 @@ const ta: Strings = {
   checking: 'இணைப்பைச் சரிபார்க்கிறது…',
   connected: (v: string) => `இணைக்கப்பட்டது · v${v} · தரவுத்தளம் சரி`,
   dbDown: 'சேவையகம் கிடைக்கிறது, ஆனால் தரவுத்தளம் இயங்கவில்லை.',
+  tabAssistant: 'உதவியாளர்',
+  assistantPlaceholder: 'கேளுங்கள் அல்லது சொல்லுங்கள்…',
+  assistantHint:
+    'உதாரணம்: “நாளை காலை 7 மணிக்கு உடற்பயிற்சி சேர்” அல்லது “வெள்ளிக்கிழமை என்ன இருக்கு?”',
+  send: 'அனுப்பு',
+  newChat: 'புதிய உரையாடல்',
+  thinking: 'யோசிக்கிறேன்…',
+  confirm: 'ஆமாம், செய்',
+  notNow: 'வேண்டாம்',
+  clashesWith: 'இதனுடன் மோதுகிறது',
+  assistantUnavailable:
+    'உதவியாளர் இன்னும் சேவையகத்தில் அமைக்கப்படவில்லை (மாதிரி சாவி இல்லை). மற்ற அனைத்தும் இயங்கும்.',
+  assistantBusy: 'உதவியாளர் இப்போது பிஸியாக உள்ளது. ஒரு நிமிடம் கழித்து முயற்சிக்கவும்.',
+  assistantPrivacy:
+    'செய்திகள் Google Gemini (இலவச அடுக்கு) மூலம் செயலாக்கப்படுகின்றன. Google அவற்றைப் பார்க்கலாம்; மிக முக்கியமான தனிப்பட்ட விவரங்களைத் தவிர்க்கவும்.',
   dueNow: 'இப்போது',
   gotIt: 'சரி',
   snooze: (n: number) => `${n} நிமிடம் கழித்து`,

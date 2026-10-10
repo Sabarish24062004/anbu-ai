@@ -16,6 +16,10 @@ export function errorMessage(err: unknown, t: Strings): string {
       return t.errorTaskBlocked;
     case 'VALIDATION_ERROR':
       return t.errorValidation;
+    case 'ASSISTANT_UNAVAILABLE':
+      return t.assistantUnavailable;
+    case 'ASSISTANT_BUSY':
+      return t.assistantBusy;
     default:
       return t.errorGeneric;
   }

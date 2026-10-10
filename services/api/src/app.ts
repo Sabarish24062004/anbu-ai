@@ -8,6 +8,8 @@ import type { PrismaClient } from './database/prisma';
 import { errorHandler, notFoundHandler } from './common/middleware/error-handler';
 import { idempotency } from './common/middleware/idempotency';
 import { requireAuth } from './common/middleware/require-auth';
+import { assistantRouter } from './modules/assistant/assistant.routes';
+import type { LlmProvider } from './modules/assistant/llm/types';
 import { authRouter } from './modules/auth/auth.routes';
 import type { TokenConfig } from './modules/auth/tokens';
 import { eventsRouter } from './modules/events/events.routes';
@@ -22,9 +24,11 @@ export interface AppDeps {
   env: Env;
   prisma: PrismaClient;
   logger: Logger;
+  /** The assistant's model; null when none is configured. */
+  llm?: LlmProvider | null;
 }
 
-export function createApp({ env, prisma, logger }: AppDeps) {
+export function createApp({ env, prisma, logger, llm = null }: AppDeps) {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 1);
@@ -61,6 +65,7 @@ export function createApp({ env, prisma, logger }: AppDeps) {
   app.use('/tasks', authed, tasksRouter(prisma));
   app.use('/important-dates', authed, importantDatesRouter(prisma));
   app.use('/reminders', authed, remindersRouter(prisma));
+  app.use('/assistant', authed, assistantRouter({ prisma, llm, logger, appName: env.APP_NAME }));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

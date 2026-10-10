@@ -325,3 +325,38 @@ export async function deleteEvent(prisma: PrismaClient, userId: string, id: stri
     await audit(tx, { userId, action: 'event.delete', entityType: 'Event', entityId: id });
   });
 }
+
+/**
+ * Scheduled events whose title, location or person matches `query` (case-insensitive), with
+ * their next occurrence in [from, to). Lets the assistant resolve "my dentist appointment" to an id.
+ */
+export async function searchEvents(
+  prisma: PrismaClient,
+  userId: string,
+  query: string,
+  from: DateTime,
+  to: DateTime,
+) {
+  const q = query.trim();
+  const events = await prisma.event.findMany({
+    where: {
+      userId,
+      status: 'SCHEDULED',
+      startAt: { lt: to.toJSDate() },
+      OR: [
+        { title: { contains: q, mode: 'insensitive' } },
+        { location: { contains: q, mode: 'insensitive' } },
+        { personName: { contains: q, mode: 'insensitive' } },
+      ],
+    },
+    orderBy: { startAt: 'asc' },
+    take: 50,
+  });
+  const found: { event: ReturnType<typeof toEventDto>; nextStart: string }[] = [];
+  for (const event of events) {
+    const { start, durationMs, rule } = scheduleOf(event);
+    const [next] = occurrencesInRange(start, durationMs, rule, from, to, 1);
+    if (next) found.push({ event: toEventDto(event), nextStart: next.toISO() ?? '' });
+  }
+  return found.slice(0, 10);
+}

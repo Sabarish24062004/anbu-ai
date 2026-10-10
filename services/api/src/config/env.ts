@@ -29,6 +29,9 @@ const envSchema = z.object({
     .default('true')
     .transform((v) => v === 'true'),
   REMINDER_POLL_SECONDS: z.coerce.number().int().min(5).max(600).default(30),
+  // Assistant model. Without a key the assistant reports itself unavailable; everything else works.
+  GEMINI_API_KEY: z.string().min(1).optional(),
+  GEMINI_MODEL: z.string().min(1).default('gemini-3.5-flash-lite'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 

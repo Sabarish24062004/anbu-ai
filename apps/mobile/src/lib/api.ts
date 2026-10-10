@@ -1,5 +1,8 @@
 import {
   healthResponseSchema,
+  type AssistantReplyDto,
+  type ConversationDto,
+  type PendingDecisionDto,
   type AuthResponse,
   type CompleteTaskResponse,
   type CreateEventInput,
@@ -139,6 +142,24 @@ export const api = {
     }),
   deleteImportantDate: (id: string) =>
     request<void>(`/important-dates/${id}`, { method: 'DELETE' }),
+
+  assistantStatus: () => request<{ available: boolean }>('/assistant/status'),
+  latestConversation: () =>
+    request<{ conversation: ConversationDto | null }>('/assistant/conversations/latest'),
+  sendAssistantMessage: (
+    input: { conversationId?: string; text: string },
+    idempotencyKey?: string,
+  ) =>
+    request<AssistantReplyDto>('/assistant/messages', {
+      method: 'POST',
+      body: input,
+      idempotencyKey,
+    }),
+  decidePending: (conversationId: string, pendingId: string, decision: 'confirm' | 'decline') =>
+    request<PendingDecisionDto>(
+      `/assistant/conversations/${conversationId}/pending/${pendingId}/${decision}`,
+      { method: 'POST' },
+    ),
 
   upcomingReminders: (hours: number) =>
     request<{ reminders: ReminderDto[] }>('/reminders/upcoming', { query: { hours } }),
