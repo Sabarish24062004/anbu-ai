@@ -1,6 +1,7 @@
 import {
   healthResponseSchema,
   type AssistantReplyDto,
+  type AssistantVoiceReplyDto,
   type ConversationDto,
   type PendingDecisionDto,
   type AuthResponse,
@@ -36,7 +37,11 @@ interface RequestOptions {
   query?: Record<string, string | number | undefined>;
   /** Lets the server apply a retried mutation once (see the API's idempotency middleware). */
   idempotencyKey?: string;
+  timeoutMs?: number;
 }
+
+// An assistant turn can take several model calls, plus transcription for voice.
+const ASSISTANT_TIMEOUT_MS = 60_000;
 
 const signedOut = () => new ApiError('Sign in required', 'http', 401, 'UNAUTHORIZED');
 
@@ -51,6 +56,7 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     sendJson(url, {
       method: opts.method,
       body: opts.body,
+      timeoutMs: opts.timeoutMs,
       headers: {
         Authorization: `Bearer ${token}`,
         ...(opts.idempotencyKey ? { 'Idempotency-Key': opts.idempotencyKey } : {}),
@@ -143,7 +149,17 @@ export const api = {
   deleteImportantDate: (id: string) =>
     request<void>(`/important-dates/${id}`, { method: 'DELETE' }),
 
-  assistantStatus: () => request<{ available: boolean }>('/assistant/status'),
+  assistantStatus: () => request<{ available: boolean; voice: boolean }>('/assistant/status'),
+  sendVoiceMessage: (
+    input: { conversationId?: string; audio: string; mimeType: string },
+    idempotencyKey?: string,
+  ) =>
+    request<AssistantVoiceReplyDto>('/assistant/voice', {
+      method: 'POST',
+      body: input,
+      idempotencyKey,
+      timeoutMs: ASSISTANT_TIMEOUT_MS,
+    }),
   latestConversation: () =>
     request<{ conversation: ConversationDto | null }>('/assistant/conversations/latest'),
   sendAssistantMessage: (
@@ -154,6 +170,7 @@ export const api = {
       method: 'POST',
       body: input,
       idempotencyKey,
+      timeoutMs: ASSISTANT_TIMEOUT_MS,
     }),
   decidePending: (conversationId: string, pendingId: string, decision: 'confirm' | 'decline') =>
     request<PendingDecisionDto>(

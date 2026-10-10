@@ -1,4 +1,4 @@
-import { sendAssistantMessageSchema } from '@anbu/shared';
+import { sendAssistantMessageSchema, sendVoiceMessageSchema } from '@anbu/shared';
 import { Router } from 'express';
 import { currentUserId } from '../../common/middleware/require-auth';
 import { parseId } from '../../common/params';
@@ -7,6 +7,7 @@ import {
   decidePending,
   getConversation,
   handleMessage,
+  handleVoiceMessage,
   type AssistantDeps,
 } from './assistant.service';
 
@@ -15,7 +16,16 @@ export function assistantRouter(deps: AssistantDeps) {
 
   /** Whether the server has a model configured, so the app can explain instead of failing. */
   router.get('/status', (_req, res) => {
-    res.json({ available: deps.llm !== null });
+    res.json({
+      available: deps.llm !== null,
+      voice: deps.llm !== null && deps.transcriber !== null,
+    });
+  });
+
+  // app.ts parses a larger JSON body for this route only.
+  router.post('/voice', async (req, res) => {
+    const input = parseInput(sendVoiceMessageSchema, req.body);
+    res.json(await handleVoiceMessage(deps, currentUserId(req), input));
   });
 
   router.post('/messages', async (req, res) => {

@@ -20,6 +20,8 @@ export function errorMessage(err: unknown, t: Strings): string {
       return t.assistantUnavailable;
     case 'ASSISTANT_BUSY':
       return t.assistantBusy;
+    case 'NO_SPEECH':
+      return t.noSpeech;
     default:
       return t.errorGeneric;
   }

@@ -58,3 +58,10 @@ export class LlmError extends Error {
     this.name = 'LlmError';
   }
 }
+
+/** Speech to text for voice messages. */
+export interface Transcriber {
+  readonly name: string;
+  /** Returns the spoken words, or an empty string when there is no speech. */
+  transcribe(audio: { base64: string; mimeType: string }): Promise<string>;
+}

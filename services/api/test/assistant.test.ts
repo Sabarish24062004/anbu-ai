@@ -33,7 +33,7 @@ describe('availability', () => {
     const plain = buildTestApp();
     try {
       const status = await request(plain.app).get('/assistant/status').set(user.auth);
-      expect(status.body).toEqual({ available: false });
+      expect(status.body).toEqual({ available: false, voice: false });
       const res = await request(plain.app)
         .post('/assistant/messages')
         .set(user.auth)

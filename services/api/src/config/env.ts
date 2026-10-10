@@ -32,6 +32,8 @@ const envSchema = z.object({
   // Assistant model. Without a key the assistant reports itself unavailable; everything else works.
   GEMINI_API_KEY: z.string().min(1).optional(),
   GEMINI_MODEL: z.string().min(1).default('gemini-3.5-flash-lite'),
+  // Model for voice transcription; defaults to GEMINI_MODEL.
+  GEMINI_TRANSCRIBE_MODEL: z.string().min(1).optional(),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 

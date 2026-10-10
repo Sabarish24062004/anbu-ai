@@ -27,7 +27,13 @@
       "expo-router",
       "expo-secure-store",
       "@react-native-community/datetimepicker",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow $(PRODUCT_NAME) to hear your voice commands."
+        }
+      ]
     ],
     "scheme": "anbu",
     "experiments": {

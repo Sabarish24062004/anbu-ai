@@ -1,4 +1,10 @@
-import { LlmError, type LlmProvider, type LlmSession, type ToolCall } from './types';
+import {
+  LlmError,
+  type LlmProvider,
+  type LlmSession,
+  type ToolCall,
+  type Transcriber,
+} from './types';
 
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/interactions';
 const TIMEOUT_MS = 30_000;
@@ -71,6 +77,47 @@ export function createGeminiProvider(opts: { apiKey: string; model: string }): L
           return { text: text || null, toolCalls };
         },
       };
+    },
+  };
+}
+
+const TRANSCRIBE_PROMPT = [
+  'Transcribe the speech in this audio exactly as spoken.',
+  'The speaker may use Tamil, English, or a mix of both.',
+  'Write Tamil words in Tamil script and English words in English letters.',
+  'Output only the transcript: no labels, quotes, translation or commentary.',
+  'If there is no intelligible speech, output nothing.',
+].join(' ');
+
+/** Speech-to-text with the same Gemini API; used for voice messages. */
+export function createGeminiTranscriber(opts: { apiKey: string; model: string }): Transcriber {
+  return {
+    name: `gemini:${opts.model}`,
+    async transcribe({ base64, mimeType }) {
+      const body = await post(opts.apiKey, {
+        model: opts.model,
+        input: [
+          {
+            type: 'user_input',
+            content: [
+              { type: 'text', text: TRANSCRIBE_PROMPT },
+              { type: 'audio', data: base64, mime_type: mimeType },
+            ],
+          },
+        ],
+        store: false,
+        generation_config: { max_output_tokens: 1024 },
+      });
+      if (body.status === 'failed' || body.status === 'cancelled') {
+        throw new LlmError(`Transcription ${body.status}`, 'bad_response');
+      }
+      return (body.steps ?? [])
+        .filter((s) => s.type === 'model_output')
+        .flatMap((s) => (s['content'] as { type?: string; text?: string }[] | undefined) ?? [])
+        .filter((c) => c.type === 'text' && c.text)
+        .map((c) => c.text)
+        .join('')
+        .trim();
     },
   };
 }

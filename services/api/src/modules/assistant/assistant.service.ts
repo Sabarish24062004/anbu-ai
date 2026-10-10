@@ -1,10 +1,12 @@
 import { DateTime } from 'luxon';
 import type { Logger } from 'pino';
 import {
+  ASSISTANT_MAX_INPUT_CHARS,
   detectLanguage,
   type AssistantActionDto,
   type AssistantMessageDto,
   type AssistantReplyDto,
+  type AssistantVoiceReplyDto,
   type ConversationDto,
   type Language,
   type PendingActionDto,
@@ -17,7 +19,13 @@ import type { PrismaClient } from '../../database/prisma';
 import type { ConversationMessage, Prisma } from '../../generated/prisma/client';
 import { cancelEvent, createEvent, updateEvent } from '../events/events.service';
 import { getActiveUser } from '../users/users.service';
-import { LlmError, type ChatTurn, type LlmProvider, type ToolResult } from './llm/types';
+import {
+  LlmError,
+  type ChatTurn,
+  type LlmProvider,
+  type ToolResult,
+  type Transcriber,
+} from './llm/types';
 import { describeAction, fallbackReply, messages } from './messages';
 import { buildSystemPrompt } from './prompt';
 import {
@@ -37,6 +45,7 @@ const PENDING_TOOL = 'pending_action';
 export interface AssistantDeps {
   prisma: PrismaClient;
   llm: LlmProvider | null;
+  transcriber: Transcriber | null;
   logger: Logger;
   appName: string;
 }
@@ -201,6 +210,7 @@ export async function handleMessage(
       displayName: user.displayName,
       timezone: user.timezone,
       preferredLanguage: user.language,
+      replyLanguage: language,
       now: DateTime.fromJSDate(now),
       pendingSummary: pending?.payload.summary ?? null,
     }),
@@ -263,11 +273,7 @@ export async function handleMessage(
     if (!(e instanceof LlmError)) throw e;
     logger.warn({ kind: e.kind, err: e.message }, 'Assistant model call failed');
     modelFailed = true;
-    if (!actions.length && !newPending) {
-      throw e.kind === 'rate_limited'
-        ? new AppError(503, 'ASSISTANT_BUSY', 'The assistant is busy. Please try again shortly.')
-        : new AppError(503, 'ASSISTANT_UNAVAILABLE', 'The assistant is unavailable right now');
-    }
+    if (!actions.length && !newPending) throw modelFailure(e);
   }
   if (!replyText) {
     // The model failed or stopped without words: describe exactly what the database says happened.
@@ -370,6 +376,44 @@ export async function handleMessage(
     reply: toMessageDto(stored.reply),
     pendingAction: stillPending ? toPendingDto(stillPending) : null,
   };
+}
+
+const modelFailure = (e: LlmError) =>
+  e.kind === 'rate_limited'
+    ? new AppError(503, 'ASSISTANT_BUSY', 'The assistant is busy. Please try again shortly.')
+    : new AppError(503, 'ASSISTANT_UNAVAILABLE', 'The assistant is unavailable right now');
+
+/**
+ * A spoken message: transcribe it, then handle the words exactly like a typed message. The audio
+ * itself is never stored; only the transcript is kept, as the user's message.
+ */
+export async function handleVoiceMessage(
+  deps: AssistantDeps,
+  userId: string,
+  input: { conversationId?: string; audio: string; mimeType: string },
+): Promise<AssistantVoiceReplyDto> {
+  if (!deps.llm || !deps.transcriber) {
+    throw new AppError(503, 'ASSISTANT_UNAVAILABLE', 'Voice is not configured on the server');
+  }
+  // Gemini lists audio/m4a, not audio/mp4, for the AAC-in-MP4 recordings phones make.
+  const mimeType = input.mimeType === 'audio/mp4' ? 'audio/m4a' : input.mimeType;
+  let transcript: string;
+  try {
+    transcript = await deps.transcriber.transcribe({ base64: input.audio, mimeType });
+  } catch (e) {
+    if (!(e instanceof LlmError)) throw e;
+    deps.logger.warn({ kind: e.kind, err: e.message }, 'Transcription failed');
+    throw modelFailure(e);
+  }
+  transcript = transcript.slice(0, ASSISTANT_MAX_INPUT_CHARS).trim();
+  if (!transcript) {
+    throw new AppError(422, 'NO_SPEECH', 'I could not hear any words. Please try again.');
+  }
+  const reply = await handleMessage(deps, userId, {
+    conversationId: input.conversationId,
+    text: transcript,
+  });
+  return { ...reply, transcript };
 }
 
 /** Confirms or declines the waiting action from its card in the app (no model involved). */

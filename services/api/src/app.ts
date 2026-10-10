@@ -9,7 +9,7 @@ import { errorHandler, notFoundHandler } from './common/middleware/error-handler
 import { idempotency } from './common/middleware/idempotency';
 import { requireAuth } from './common/middleware/require-auth';
 import { assistantRouter } from './modules/assistant/assistant.routes';
-import type { LlmProvider } from './modules/assistant/llm/types';
+import type { LlmProvider, Transcriber } from './modules/assistant/llm/types';
 import { authRouter } from './modules/auth/auth.routes';
 import type { TokenConfig } from './modules/auth/tokens';
 import { eventsRouter } from './modules/events/events.routes';
@@ -26,9 +26,11 @@ export interface AppDeps {
   logger: Logger;
   /** The assistant's model; null when none is configured. */
   llm?: LlmProvider | null;
+  /** Speech to text for voice messages; null when none is configured. */
+  transcriber?: Transcriber | null;
 }
 
-export function createApp({ env, prisma, logger, llm = null }: AppDeps) {
+export function createApp({ env, prisma, logger, llm = null, transcriber = null }: AppDeps) {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 1);
@@ -36,7 +38,12 @@ export function createApp({ env, prisma, logger, llm = null }: AppDeps) {
   app.use(helmet());
   // Native mobile requests carry no Origin header; CORS only restricts browser (Expo web) clients.
   app.use(cors({ origin: env.CORS_ORIGINS }));
-  app.use(express.json({ limit: '100kb' }));
+  // Small bodies everywhere except voice uploads (a minute of compressed audio, base64-encoded).
+  const smallJson = express.json({ limit: '100kb' });
+  const voiceJson = express.json({ limit: '3mb' });
+  app.use((req, res, next) =>
+    req.path === '/assistant/voice' ? voiceJson(req, res, next) : smallJson(req, res, next),
+  );
   app.use(
     pinoHttp({
       logger,
@@ -65,7 +72,11 @@ export function createApp({ env, prisma, logger, llm = null }: AppDeps) {
   app.use('/tasks', authed, tasksRouter(prisma));
   app.use('/important-dates', authed, importantDatesRouter(prisma));
   app.use('/reminders', authed, remindersRouter(prisma));
-  app.use('/assistant', authed, assistantRouter({ prisma, llm, logger, appName: env.APP_NAME }));
+  app.use(
+    '/assistant',
+    authed,
+    assistantRouter({ prisma, llm, transcriber, logger, appName: env.APP_NAME }),
+  );
 
   app.use(notFoundHandler);
   app.use(errorHandler);

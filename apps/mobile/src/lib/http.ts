@@ -24,10 +24,15 @@ export interface RawResponse {
 /** One HTTP round trip with a timeout. Network failures become ApiError; HTTP errors do not. */
 export async function sendJson(
   path: string,
-  init: { method?: string; body?: unknown; headers?: Record<string, string> } = {},
+  init: {
+    method?: string;
+    body?: unknown;
+    headers?: Record<string, string>;
+    timeoutMs?: number;
+  } = {},
 ): Promise<RawResponse> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), init.timeoutMs ?? REQUEST_TIMEOUT_MS);
   try {
     const res = await fetch(`${getApiBaseUrl()}${path}`, {
       method: init.method ?? 'GET',

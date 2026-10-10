@@ -118,6 +118,17 @@ const en = {
   assistantBusy: 'The assistant is busy right now. Please try again in a minute.',
   assistantPrivacy:
     'Messages are processed by Google Gemini (free tier). Google may review them; avoid sharing anything very sensitive.',
+  // Voice
+  speak: 'Speak',
+  listening: (s: number) => `Listening… ${s}s`,
+  stopAndSend: 'Send',
+  discard: 'Cancel',
+  micDenied: 'Microphone access is off. Allow it in phone settings to talk to the assistant.',
+  noSpeech: 'I could not hear any words. Please try again.',
+  speakReplies: 'Read replies aloud after you speak',
+  readAloud: 'Read aloud',
+  noTamilVoice:
+    'This phone has no Tamil voice, so Tamil replies are shown but not read aloud. You can add one in the phone’s text-to-speech settings.',
   // Reminders
   dueNow: 'Due now',
   gotIt: 'Got it',
@@ -259,6 +270,16 @@ const ta: Strings = {
   assistantBusy: 'உதவியாளர் இப்போது பிஸியாக உள்ளது. ஒரு நிமிடம் கழித்து முயற்சிக்கவும்.',
   assistantPrivacy:
     'செய்திகள் Google Gemini (இலவச அடுக்கு) மூலம் செயலாக்கப்படுகின்றன. Google அவற்றைப் பார்க்கலாம்; மிக முக்கியமான தனிப்பட்ட விவரங்களைத் தவிர்க்கவும்.',
+  speak: 'பேசு',
+  listening: (s: number) => `கேட்கிறேன்… ${s} வி`,
+  stopAndSend: 'அனுப்பு',
+  discard: 'ரத்து',
+  micDenied: 'மைக்ரோஃபோன் அனுமதி இல்லை. உதவியாளரிடம் பேச தொலைபேசி அமைப்புகளில் அனுமதிக்கவும்.',
+  noSpeech: 'எந்த வார்த்தையும் கேட்கவில்லை. மீண்டும் முயற்சிக்கவும்.',
+  speakReplies: 'நீங்கள் பேசிய பின் பதிலை வாசித்துக் காட்டு',
+  readAloud: 'வாசி',
+  noTamilVoice:
+    'இந்த தொலைபேசியில் தமிழ் குரல் இல்லை; தமிழ் பதில்கள் காட்டப்படும், வாசிக்கப்படாது. தொலைபேசியின் உரை-பேச்சு அமைப்புகளில் சேர்க்கலாம்.',
   dueNow: 'இப்போது',
   gotIt: 'சரி',
   snooze: (n: number) => `${n} நிமிடம் கழித்து`,

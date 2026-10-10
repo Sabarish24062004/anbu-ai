@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, Text, View } from 'react-native';
 import {
   REMINDER_LEAD_OPTIONS_MINUTES,
@@ -15,6 +15,7 @@ import {
   ErrorBanner,
   Loading,
   Screen,
+  SwitchRow,
   TextField,
   useStyles,
 } from '@/components/ui';
@@ -28,6 +29,7 @@ import { keys, useMe } from '@/lib/queries';
 import { sessionStore } from '@/lib/session';
 import { useSession, useT } from '@/lib/session-context';
 import { useColors } from '@/theme/colors';
+import { canSpeak, voiceSupported } from '@/lib/voice';
 
 export default function SettingsScreen() {
   const s = useStyles();
@@ -95,6 +97,18 @@ export default function SettingsScreen() {
               label: t.minutesBefore(m),
             }))}
           />
+          {voiceSupported && (
+            <>
+              <SwitchRow
+                label={t.speakReplies}
+                value={me.data.preferences.voiceResponsesEnabled}
+                onChange={(on) =>
+                  void apply(() => api.updatePreferences({ voiceResponsesEnabled: on }))
+                }
+              />
+              {me.data.preferences.voiceResponsesEnabled && <TamilVoiceNote />}
+            </>
+          )}
           <View style={{ gap: 6 }}>
             <Text style={s.label}>{t.timezone}</Text>
             <Text style={s.body}>{me.data.user.timezone}</Text>
@@ -131,6 +145,21 @@ function NameField({ saved, onSave }: { saved: string; onSave: (name: string | n
       }}
     />
   );
+}
+
+/** Warns when replies in Tamil cannot be read aloud because the phone has no Tamil voice. */
+function TamilVoiceNote() {
+  const s = useStyles();
+  const t = useT();
+  const [hasTamil, setHasTamil] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    void canSpeak('ta').then((ok) => alive && setHasTamil(ok));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return hasTamil ? null : <Text style={s.muted}>{t.noTamilVoice}</Text>;
 }
 
 function NotificationStatus() {

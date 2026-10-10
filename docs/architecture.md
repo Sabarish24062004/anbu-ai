@@ -12,8 +12,8 @@
 | ------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | Mobile        | Expo (SDK 57) + React Native + TypeScript + Expo Router                      | React Query for server state, Zustand for UI state, expo-secure-store for tokens                                  |
 | Notifications | expo-notifications (local)                                                   | Remote push needs a dev build; Expo Go supports local only                                                        |
-| TTS           | expo-speech (adapter)                                                        | Tamil depends on the device having a ta-IN voice — verify per device                                              |
-| STT           | expo-speech-recognition (adapter)                                            | Requires a development build (EAS); text fallback always available                                                |
+| TTS           | expo-speech                                                                  | Tamil depends on the device having a ta-IN voice; Settings warns when it is missing                               |
+| STT           | Recorded on the phone (expo-audio), transcribed by Gemini on the server      | Works in Expo Go; on-device recognition would need a development build                                            |
 | API           | Node 24 + Express 5 + TypeScript                                             | Modules: auth, users, preferences, events, tasks, important-dates, reminders, scheduling, assistant, ai-providers |
 | DB            | PostgreSQL 18 (local service) + Prisma                                       | UUID ids, UTC timestamps + user IANA timezone, recurrence stored as local-time rules                              |
 | Jobs          | In-process reminder worker over the `Reminder` table                         | `FOR UPDATE SKIP LOCKED` claims; no Redis, no pg-boss (see Phase 3 decisions)                                     |
@@ -158,6 +158,37 @@ pending confirmation and reply are stored in one transaction.
 - **Not yet:** deterministic Tamil/Tanglish date extraction before the model (the model resolves
   relative dates from the current local time it is given), streaming replies, voice (Phase 5).
 
+## Voice (Phase 5)
+
+`POST /assistant/voice` `{ conversationId?, audio (base64), mimeType }` → transcribe → same turn as a
+typed message → `{ transcript, userMessage, reply, pendingAction }`. `GET /assistant/status` also
+reports `voice`.
+
+### Phase 5 decisions
+
+- **Server-side transcription instead of on-device recognition.** `expo-speech-recognition` needs a
+  development build; recording with `expo-audio` and transcribing with Gemini works in Expo Go and
+  handles Tamil/English mixing in one pass. The prompt asks for Tamil words in Tamil script and
+  English in English letters. The same free-tier privacy terms apply to the audio.
+- **Small, short recordings.** Mono AAC (`.m4a`), 16 kHz, 32 kbps: about 240 KB per minute. Limit
+  60 s on the phone and 2 MB on the server; only `/assistant/voice` accepts a body above 100 KB
+  (3 MB). `audio/mp4` is sent to Gemini as `audio/m4a`, the type it documents.
+- **No audio kept.** The phone deletes the recording after reading it; the server never stores
+  audio, only the transcript as the user's message. An empty transcript returns 422 `NO_SPEECH`
+  and stores nothing.
+- **Spoken replies** use `expo-speech` with the reply's language (`ta-IN` / `en-IN`), preferring an
+  Indian voice. Replies are read aloud after a spoken question when `voiceResponsesEnabled` is on;
+  every assistant message also has a "read aloud" button. Settings warns when the phone has no Tamil
+  voice (common on Android), in which case Tamil replies are shown but not spoken.
+- **Language detection** recognises Tanglish (Tamil typed in Latin letters) by a small word list,
+  and each turn tells the model which language to reply in.
+- **Verified live (2026-10-10):** an English voice command was transcribed exactly and became a task
+  with the right time (4.7 s end to end). Tamil speech has not been tested yet: this PC has no Tamil
+  text-to-speech voice to generate test audio.
+- **Free-tier limits:** a voice message uses one transcription call plus two or three assistant
+  calls, so the free tier's per-minute limit is reached after a few messages; the app then shows
+  "busy".
+
 ## Milestone plan
 
 0. Discovery ✅
@@ -165,6 +196,6 @@ pending confirmation and reply are stored in one transaction.
 2. Auth + events/tasks/important dates + conflicts + timezone tests
 3. Reminders (worker, restart recovery, dedupe, local notifications) ✅
 4. Assistant tool-calling ✅
-5. Tamil/English voice
+5. Tamil/English voice ✅
 6. Memory + daily planning
 7. Hardening + release

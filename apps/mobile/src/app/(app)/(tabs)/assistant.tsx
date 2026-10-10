@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { router, Stack } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -16,16 +17,29 @@ import {
   ASSISTANT_MAX_INPUT_CHARS,
   type AssistantActionDto,
   type AssistantMessageDto,
+  type AssistantReplyDto,
   type ConversationDto,
+  type Language,
 } from '@anbu/shared';
 import { Button, ErrorBanner, Loading } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatDate, formatTime } from '@/lib/datetime';
 import { errorMessage } from '@/lib/errors';
 import { useIdempotencyKey } from '@/lib/idempotency';
-import { keys } from '@/lib/queries';
+import { keys, useMe } from '@/lib/queries';
 import { useSession, useT } from '@/lib/session-context';
 import { useColors, type Colors } from '@/theme/colors';
+import {
+  speak,
+  stopSpeaking,
+  useVoiceRecorder,
+  voiceSupported,
+  type RecordingResult,
+} from '@/lib/voice';
+
+type TurnInput =
+  | { kind: 'text'; conversationId?: string; text: string }
+  | { kind: 'voice'; conversationId?: string; recording: RecordingResult };
 
 const CONVERSATION_KEY = ['assistant', 'conversation'] as const;
 
@@ -45,6 +59,8 @@ export default function AssistantScreen() {
   const keyFor = useIdempotencyKey();
   const scroll = useRef<ScrollView>(null);
   const [text, setText] = useState('');
+  const me = useMe();
+  const speakReplies = me.data?.preferences.voiceResponsesEnabled ?? true;
 
   const status = useQuery({ queryKey: ['assistant', 'status'], queryFn: api.assistantStatus });
   const conversation = useQuery({
@@ -65,10 +81,24 @@ export default function AssistantScreen() {
   };
 
   const send = useMutation({
-    mutationFn: (input: { conversationId?: string; text: string }) =>
-      api.sendAssistantMessage(input, keyFor(input)),
-    onSuccess: (res) => {
-      setText('');
+    mutationFn: (input: TurnInput): Promise<AssistantReplyDto> => {
+      if (input.kind === 'text') {
+        const body = { conversationId: input.conversationId, text: input.text };
+        return api.sendAssistantMessage(body, keyFor(body));
+      }
+      const body = {
+        conversationId: input.conversationId,
+        audio: input.recording.base64,
+        mimeType: input.recording.mimeType,
+      };
+      return api.sendVoiceMessage(body, keyFor(body));
+    },
+    onSuccess: (res, input) => {
+      if (input.kind === 'text') setText('');
+      // Spoken questions get spoken answers (if the user has not turned that off).
+      if (input.kind === 'voice' && speakReplies) {
+        void speak(res.reply.text, res.reply.language ?? language);
+      }
       update((c) => ({
         id: res.conversationId,
         messages: [...(c?.id === res.conversationId ? c.messages : []), res.userMessage, res.reply],
@@ -90,8 +120,14 @@ export default function AssistantScreen() {
   const submit = () => {
     const trimmed = text.trim();
     if (!trimmed || send.isPending) return;
-    send.mutate({ conversationId: convo?.id, text: trimmed });
+    send.mutate({ kind: 'text', conversationId: convo?.id, text: trimmed });
   };
+
+  const sendRecording = (recording: RecordingResult | null) => {
+    if (recording) send.mutate({ kind: 'voice', conversationId: convo?.id, recording });
+  };
+  const recorder = useVoiceRecorder(sendRecording);
+  const voiceAvailable = voiceSupported && status.data?.voice === true;
 
   const unavailable = status.data?.available === false;
   const messages = convo?.messages ?? [];
@@ -103,7 +139,6 @@ export default function AssistantScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
-      <Stack.Screen options={{}} />
       <ScrollView
         ref={scroll}
         contentContainerStyle={s.list}
@@ -116,7 +151,9 @@ export default function AssistantScreen() {
         ) : messages.length === 0 ? (
           <Text style={s.hint}>{t.assistantHint}</Text>
         ) : (
-          messages.map((m) => <Bubble key={m.id} message={m} styles={s} />)
+          messages.map((m) => (
+            <Bubble key={m.id} message={m} styles={s} fallbackLanguage={language} />
+          ))
         )}
 
         {pending && (
@@ -150,44 +187,83 @@ export default function AssistantScreen() {
             <Text style={s.meta}>{t.thinking}</Text>
           </View>
         )}
+        {recorder.permission === 'denied' && <ErrorBanner message={t.micDenied} />}
         {(send.error ?? decide.error) && (
           <ErrorBanner message={errorMessage(send.error ?? decide.error, t)} />
         )}
       </ScrollView>
 
-      <View style={s.composer}>
-        <TextInput
-          value={text}
-          onChangeText={setText}
-          placeholder={t.assistantPlaceholder}
-          placeholderTextColor={colors.textMuted}
-          accessibilityLabel={t.assistantPlaceholder}
-          style={s.input}
-          multiline
-          maxLength={ASSISTANT_MAX_INPUT_CHARS}
-          editable={!unavailable}
-          onSubmitEditing={submit}
-          blurOnSubmit={false}
-        />
-        <Pressable
-          onPress={submit}
-          disabled={!text.trim() || send.isPending || unavailable}
-          accessibilityRole="button"
-          accessibilityLabel={t.send}
-          style={({ pressed }) => [
-            s.send,
-            (!text.trim() || send.isPending || unavailable || pressed) && { opacity: 0.5 },
-          ]}
-        >
-          <Text style={s.sendText}>{t.send}</Text>
-        </Pressable>
-      </View>
+      {recorder.isRecording ? (
+        <View style={s.composer} accessibilityLiveRegion="polite">
+          <View style={s.recording}>
+            <View style={s.recDot} />
+            <Text style={s.recText}>{t.listening(recorder.seconds)}</Text>
+          </View>
+          <Pressable
+            onPress={() => void recorder.discard()}
+            accessibilityRole="button"
+            accessibilityLabel={t.discard}
+            style={({ pressed }) => [s.secondaryBtn, pressed && { opacity: 0.6 }]}
+          >
+            <Text style={s.secondaryText}>{t.discard}</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => void recorder.finish().then(sendRecording)}
+            accessibilityRole="button"
+            accessibilityLabel={t.stopAndSend}
+            style={({ pressed }) => [s.send, pressed && { opacity: 0.6 }]}
+          >
+            <Text style={s.sendText}>{t.stopAndSend}</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <View style={s.composer}>
+          <TextInput
+            value={text}
+            onChangeText={setText}
+            placeholder={t.assistantPlaceholder}
+            placeholderTextColor={colors.textMuted}
+            accessibilityLabel={t.assistantPlaceholder}
+            style={s.input}
+            multiline
+            maxLength={ASSISTANT_MAX_INPUT_CHARS}
+            editable={!unavailable}
+            onSubmitEditing={submit}
+            blurOnSubmit={false}
+          />
+          {voiceAvailable && !text.trim() ? (
+            <Pressable
+              onPress={() => void recorder.start()}
+              disabled={send.isPending}
+              accessibilityRole="button"
+              accessibilityLabel={t.speak}
+              style={({ pressed }) => [s.mic, (send.isPending || pressed) && { opacity: 0.5 }]}
+            >
+              <Ionicons name="mic" size={26} color={colors.onPrimary} />
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={submit}
+              disabled={!text.trim() || send.isPending || unavailable}
+              accessibilityRole="button"
+              accessibilityLabel={t.send}
+              style={({ pressed }) => [
+                s.send,
+                (!text.trim() || send.isPending || unavailable || pressed) && { opacity: 0.5 },
+              ]}
+            >
+              <Text style={s.sendText}>{t.send}</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
       <View style={s.footer}>
         <Text style={s.privacy}>{t.assistantPrivacy}</Text>
         {messages.length > 0 && (
           <Pressable
             onPress={() => {
               send.reset();
+              void stopSpeaking();
               queryClient.setQueryData(CONVERSATION_KEY, null);
             }}
             accessibilityRole="button"
@@ -204,14 +280,28 @@ export default function AssistantScreen() {
 function Bubble({
   message,
   styles: s,
+  fallbackLanguage,
 }: {
   message: AssistantMessageDto;
   styles: ReturnType<typeof makeStyles>;
+  fallbackLanguage: Language;
 }) {
+  const t = useT();
   const mine = message.role === 'user';
   return (
     <View style={[s.bubble, mine ? s.mine : s.theirs]}>
       <Text style={mine ? s.mineText : s.theirsText}>{message.text}</Text>
+      {!mine && voiceSupported && (
+        <Pressable
+          onPress={() => void speak(message.text, message.language ?? fallbackLanguage)}
+          accessibilityRole="button"
+          accessibilityLabel={t.readAloud}
+          hitSlop={8}
+          style={s.speaker}
+        >
+          <Ionicons name="volume-medium-outline" size={18} style={s.speakerIcon} />
+        </Pressable>
+      )}
       {message.actions.map((a) => (
         <Pressable
           key={`${a.kind}-${a.entityId}`}
@@ -303,4 +393,26 @@ const makeStyles = (c: Colors) =>
     },
     privacy: { flex: 1, color: c.textMuted, fontSize: 12, lineHeight: 16 },
     newChat: { color: c.primary, fontSize: 14, fontWeight: '600' },
+    mic: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: c.primary,
+    },
+    recording: { flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 10 },
+    recDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: c.danger },
+    recText: { color: c.text, fontSize: 16, fontWeight: '600' },
+    secondaryBtn: {
+      minHeight: 48,
+      paddingHorizontal: 14,
+      borderRadius: 12,
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    secondaryText: { color: c.text, fontSize: 16 },
+    speaker: { alignSelf: 'flex-start' },
+    speakerIcon: { color: c.textMuted },
   });
