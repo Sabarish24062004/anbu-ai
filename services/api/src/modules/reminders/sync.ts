@@ -1,6 +1,7 @@
 import { DateTime } from 'luxon';
 import type { PrismaClient } from '../../database/prisma';
-import type { Event, ImportantDate, Prisma, Task } from '../../generated/prisma/client';
+import type { ImportantDate, Prisma, Task } from '../../generated/prisma/client';
+import { withExceptions, type EventWithExceptions } from '../events/occurrences';
 import { getUserDefaults } from '../users/users.service';
 import {
   planEventReminders,
@@ -81,7 +82,7 @@ export async function planContext(
   return { now: DateTime.fromJSDate(now), notifyMinutesOfDay: importantDateNotifyMinutes };
 }
 
-export const syncEventReminders = (tx: Tx, event: Event, ctx: PlanContext) =>
+export const syncEventReminders = (tx: Tx, event: EventWithExceptions, ctx: PlanContext) =>
   syncReminders(
     tx,
     event.userId,
@@ -123,6 +124,7 @@ export async function resyncUserReminders(prisma: PrismaClient, userId: string, 
         status: 'SCHEDULED',
         OR: [{ rrule: { not: null } }, { startAt: { gt: dayAgo } }],
       },
+      include: withExceptions,
     }),
     prisma.task.findMany({
       where: { userId, status: { in: ['PENDING', 'IN_PROGRESS'] }, dueAt: { gt: now } },

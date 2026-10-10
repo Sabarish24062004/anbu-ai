@@ -1,8 +1,7 @@
 import { DateTime } from 'luxon';
-import { parseRRule } from '@anbu/shared';
-import { occurrencesInRange } from '../../common/recurrence';
+import { expandEvent, type EventWithExceptions } from '../events/occurrences';
 import { observedDate } from '../../common/time';
-import type { Event, ImportantDate, Task } from '../../generated/prisma/client';
+import type { ImportantDate, Task } from '../../generated/prisma/client';
 
 /**
  * Reminders are materialised as rows this far ahead; an hourly job extends the window, so
@@ -61,19 +60,16 @@ function remindersFor(anchors: DateTime[], offsets: number[], ctx: PlanContext):
 const lookahead = (offsets: number[], ctx: PlanContext) =>
   ctx.now.plus({ days: HORIZON_DAYS, minutes: Math.max(0, ...offsets) });
 
-export function planEventReminders(event: Event, ctx: PlanContext): DesiredReminder[] {
+export function planEventReminders(
+  event: EventWithExceptions,
+  ctx: PlanContext,
+): DesiredReminder[] {
   if (event.status !== 'SCHEDULED' || !event.remindersEnabled) return [];
-  const start = DateTime.fromJSDate(event.startAt, { zone: event.timezone });
-  const durationMs = event.endAt ? event.endAt.getTime() - event.startAt.getTime() : 0;
-  const rule = event.rrule ? parseRRule(event.rrule) : null;
   // All-day occurrences start at midnight; look back a day so today's notify time is included.
   const from = event.allDay ? ctx.now.minus({ days: 1 }) : ctx.now;
-  const starts = occurrencesInRange(
-    start,
-    durationMs,
-    rule,
-    from,
-    lookahead(event.reminderOffsets, ctx),
+  // Skipped occurrences get no reminder; moved ones are reminded at their new time.
+  const starts = expandEvent(event, from, lookahead(event.reminderOffsets, ctx)).map(
+    (o) => o.start,
   );
   const anchors = event.allDay
     ? starts.map((s) => s.startOf('day').plus({ minutes: ctx.notifyMinutesOfDay }))

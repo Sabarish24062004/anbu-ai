@@ -29,6 +29,10 @@ const T = {
     'event.created': (t: string, w: string) => `Added “${t}”${w ? ` on ${w}` : ''}.`,
     'event.updated': (t: string, w: string) => `Updated “${t}”${w ? ` — now ${w}` : ''}.`,
     'event.cancelled': (t: string) => `Cancelled “${t}”.`,
+    'event.occurrence_skipped': (t: string, w: string) => `Skipped “${t}” on ${w}.`,
+    'event.occurrence_moved': (t: string, w: string) => `Moved this “${t}” to ${w}.`,
+    confirmMoveOccurrence: (t: string, w: string) =>
+      `Move this “${t}” to ${w} even though it overlaps`,
     'task.created': (t: string, w: string) => `Added the task “${t}”${w ? `, due ${w}` : ''}.`,
     'task.completed': (t: string) => `Marked “${t}” as done.`,
     'task.rescheduled': (t: string, w: string) => `Done! “${t}” is next due ${w}.`,
@@ -47,6 +51,10 @@ const T = {
     'event.created': (t: string, w: string) => `“${t}” சேர்க்கப்பட்டது${w ? ` — ${w}` : ''}.`,
     'event.updated': (t: string, w: string) => `“${t}” மாற்றப்பட்டது${w ? ` — இப்போது ${w}` : ''}.`,
     'event.cancelled': (t: string) => `“${t}” ரத்து செய்யப்பட்டது.`,
+    'event.occurrence_skipped': (t: string, w: string) => `${w} அன்று “${t}” தவிர்க்கப்பட்டது.`,
+    'event.occurrence_moved': (t: string, w: string) => `இந்த “${t}” ${w} க்கு மாற்றப்பட்டது.`,
+    confirmMoveOccurrence: (t: string, w: string) =>
+      `நேரம் மோதினாலும் இந்த “${t}” ஐ ${w} க்கு மாற்றவா`,
     'task.created': (t: string, w: string) =>
       `“${t}” பணி சேர்க்கப்பட்டது${w ? ` — கெடு ${w}` : ''}.`,
     'task.completed': (t: string) => `“${t}” முடிந்ததாகக் குறிக்கப்பட்டது.`,

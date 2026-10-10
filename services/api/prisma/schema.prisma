@@ -37,6 +37,12 @@ enum EventStatus {
   CANCELLED
 }
 
+// A change to one occurrence of a recurring event.
+enum EventExceptionKind {
+  SKIPPED // this occurrence does not happen
+  MOVED // this occurrence happens at startAt..endAt instead
+}
+
 enum TaskStatus {
   PENDING
   IN_PROGRESS
@@ -111,6 +117,7 @@ model User {
   messages        ConversationMessage[]
   memories        Memory[]
   events          Event[]
+  eventExceptions EventException[]
   tasks           Task[]
   importantDates  ImportantDate[]
   reminders       Reminder[]
@@ -229,11 +236,32 @@ model Event {
   createdAt           DateTime    @default(now()) @db.Timestamptz(3)
   updatedAt           DateTime    @updatedAt @db.Timestamptz(3)
 
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reminders Reminder[]
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reminders  Reminder[]
+  exceptions EventException[]
 
   @@index([userId, startAt])
   @@index([userId, status])
+}
+
+// Identified by the occurrence's original start, so it survives being moved more than once.
+// Editing the series' schedule removes its exceptions.
+model EventException {
+  id            String             @id @default(uuid(7)) @db.Uuid
+  eventId       String             @db.Uuid
+  userId        String             @db.Uuid
+  originalStart DateTime           @db.Timestamptz(3)
+  kind          EventExceptionKind
+  startAt       DateTime?          @db.Timestamptz(3) // MOVED only
+  endAt         DateTime?          @db.Timestamptz(3)
+  createdAt     DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime           @updatedAt @db.Timestamptz(3)
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, originalStart])
+  @@index([userId, startAt])
 }
 
 model Task {

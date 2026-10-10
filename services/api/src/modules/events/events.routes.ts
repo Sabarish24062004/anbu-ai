@@ -1,4 +1,10 @@
-import { createEventSchema, listEventsQuerySchema, updateEventSchema } from '@anbu/shared';
+import {
+  createEventSchema,
+  listEventsQuerySchema,
+  moveOccurrenceSchema,
+  skipOccurrenceSchema,
+  updateEventSchema,
+} from '@anbu/shared';
 import { Router } from 'express';
 import { currentUserId } from '../../common/middleware/require-auth';
 import { parseId } from '../../common/params';
@@ -13,6 +19,12 @@ import {
   listOccurrences,
   updateEvent,
 } from './events.service';
+import {
+  listExceptions,
+  moveOccurrence,
+  restoreOccurrence,
+  skipOccurrence,
+} from './exceptions.service';
 
 export function eventsRouter(prisma: PrismaClient) {
   const router = Router();
@@ -29,7 +41,31 @@ export function eventsRouter(prisma: PrismaClient) {
 
   router.get('/:id', async (req, res) => {
     const id = parseId(req.params.id, 'Event');
-    res.json({ event: await getEvent(prisma, currentUserId(req), id) });
+    const userId = currentUserId(req);
+    res.json({
+      event: await getEvent(prisma, userId, id),
+      exceptions: await listExceptions(prisma, userId, id),
+    });
+  });
+
+  // One occurrence of a recurring event.
+  router.post('/:id/occurrences/skip', async (req, res) => {
+    const id = parseId(req.params.id, 'Event');
+    const { occurrence } = parseInput(skipOccurrenceSchema, req.body);
+    res.json(await skipOccurrence(prisma, currentUserId(req), id, occurrence));
+  });
+
+  router.post('/:id/occurrences/move', async (req, res) => {
+    const id = parseId(req.params.id, 'Event');
+    const input = parseInput(moveOccurrenceSchema, req.body);
+    res.json(await moveOccurrence(prisma, currentUserId(req), id, input));
+  });
+
+  router.delete('/:id/exceptions/:exceptionId', async (req, res) => {
+    const id = parseId(req.params.id, 'Event');
+    const exceptionId = parseId(req.params.exceptionId, 'Changed occurrence');
+    await restoreOccurrence(prisma, currentUserId(req), id, exceptionId);
+    res.status(204).end();
   });
 
   router.patch('/:id', async (req, res) => {

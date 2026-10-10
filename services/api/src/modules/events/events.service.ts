@@ -11,13 +11,13 @@ import {
 } from '@anbu/shared';
 import { audit } from '../../common/audit';
 import { AppError, notFound } from '../../common/errors';
-import { occurrencesInRange } from '../../common/recurrence';
 import { parseDateTimeInput } from '../../common/time';
 import { invalidField } from '../../common/validate';
 import type { PrismaClient } from '../../database/prisma';
 import type { EventStatus } from '../../generated/prisma/client';
 import { getUserDefaults } from '../users/users.service';
-import { findConflicts, scheduleOf, type Schedule } from './conflicts';
+import { findConflicts, type Schedule } from './conflicts';
+import { expandEvent, withExceptions } from './occurrences';
 import { toEventDto } from './events.mapper';
 import { planContext, syncEventReminders } from '../reminders/sync';
 
@@ -121,6 +121,7 @@ export async function createEvent(
   const ctx = await planContext(prisma, userId);
   const event = await prisma.$transaction(async (tx) => {
     const created = await tx.event.create({
+      include: withExceptions,
       data: {
         userId,
         title: input.title,
@@ -197,8 +198,11 @@ export async function updateEvent(
   // Reminder rows change in the same transaction as the item, so they never disagree.
   const ctx = await planContext(prisma, userId);
   const event = await prisma.$transaction(async (tx) => {
+    // Skipped/moved occurrences belong to the old schedule; a new schedule starts clean.
+    if (scheduleChanged) await tx.eventException.deleteMany({ where: { eventId: id } });
     const updated = await tx.event.update({
       where: { id },
+      include: withExceptions,
       data: {
         ...changes,
         startAt: start.toJSDate(),
@@ -258,18 +262,20 @@ export async function listOccurrences(
         { startAt: { gte: from.toJSDate() } },
       ],
     },
+    include: withExceptions,
     orderBy: { startAt: 'asc' },
   });
 
   const occurrences: EventOccurrenceDto[] = [];
   for (const event of events) {
-    const { start, durationMs, rule } = scheduleOf(event);
     const dto = toEventDto(event);
-    for (const s of occurrencesInRange(start, durationMs, rule, from, to)) {
+    for (const o of expandEvent(event, from, to)) {
       occurrences.push({
         eventId: event.id,
-        start: s.toISO() ?? '',
-        end: s.plus({ milliseconds: durationMs }).toISO() ?? '',
+        start: o.start.toISO() ?? '',
+        end: o.start.plus({ milliseconds: o.durationMs }).toISO() ?? '',
+        originalStart: o.originalStart.toISO() ?? '',
+        moved: o.moved,
         event: dto,
       });
     }
@@ -299,6 +305,7 @@ async function transition(
   const event = await prisma.$transaction(async (tx) => {
     const updated = await tx.event.update({
       where: { id },
+      include: withExceptions,
       data:
         target === 'COMPLETED'
           ? { status: target, completedAt: now }
@@ -349,14 +356,14 @@ export async function searchEvents(
         { personName: { contains: q, mode: 'insensitive' } },
       ],
     },
+    include: withExceptions,
     orderBy: { startAt: 'asc' },
     take: 50,
   });
   const found: { event: ReturnType<typeof toEventDto>; nextStart: string }[] = [];
   for (const event of events) {
-    const { start, durationMs, rule } = scheduleOf(event);
-    const [next] = occurrencesInRange(start, durationMs, rule, from, to, 1);
-    if (next) found.push({ event: toEventDto(event), nextStart: next.toISO() ?? '' });
+    const [next] = expandEvent(event, from, to, 1);
+    if (next) found.push({ event: toEventDto(event), nextStart: next.start.toISO() ?? '' });
   }
   return found.slice(0, 10);
 }

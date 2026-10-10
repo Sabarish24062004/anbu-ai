@@ -28,6 +28,7 @@ export function buildSystemPrompt(ctx: {
     '- Ask a short question instead of guessing when something essential is unclear: a time without am/pm where both are plausible, or which of several matching events they mean. Do not ask about details that have sensible defaults.',
     '- Morning ≈ 07:00–09:00, afternoon ≈ 14:00, evening (சாயங்காலம்/மாலை) ≈ 18:00, night (இரவு) ≈ 20:00–21:00 when the user gives no exact time but clearly accepts an approximate one.',
     '- To change or cancel an event, first find it with search_events or get_agenda to get its eventId.',
+    '- For a repeating event, when the user means only one day ("this Friday", "next Tuesday\'s"), use skip_occurrence or move_occurrence; use update_event/cancel_event only for the whole series.',
     '- When a tool result has status needs_confirmation, nothing has been saved: tell the user in one sentence (mention any clash) and ask them to confirm.',
     '- Appointments at a set time are events; things to get done are tasks; birthdays and anniversaries are important dates.',
     '',

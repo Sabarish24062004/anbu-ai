@@ -1,9 +1,8 @@
 import { DateTime } from 'luxon';
 import type { DayPlanDto } from '@anbu/shared';
-import { occurrencesInRange } from '../../common/recurrence';
 import { invalidField } from '../../common/validate';
 import type { PrismaClient } from '../../database/prisma';
-import { scheduleOf } from '../events/conflicts';
+import { expandEvent, withExceptions } from '../events/occurrences';
 import { listUpcoming } from '../important-dates/important-dates.service';
 import { planDay, type PlannerEvent, type PlannerTask } from './planner';
 
@@ -37,11 +36,11 @@ export async function getDayPlan(
         { endAt: { gt: day.toJSDate() } },
       ],
     },
+    include: withExceptions,
   });
   const events: PlannerEvent[] = [];
   for (const e of rows) {
-    const { start, durationMs, rule } = scheduleOf(e);
-    for (const s of occurrencesInRange(start, durationMs, rule, day, dayEnd)) {
+    for (const { start: s, durationMs } of expandEvent(e, day, dayEnd)) {
       const local = s.setZone(tz);
       events.push({
         eventId: e.id,

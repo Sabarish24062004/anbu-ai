@@ -1,6 +1,7 @@
 import { DateTime } from 'luxon';
 import { describe, expect, it } from 'vitest';
-import type { Event, ImportantDate, Task } from '../src/generated/prisma/client';
+import type { ImportantDate, Task } from '../src/generated/prisma/client';
+import type { EventWithExceptions } from '../src/modules/events/occurrences';
 import {
   planEventReminders,
   planImportantDateReminders,
@@ -14,7 +15,7 @@ const ctx: PlanContext = { now, notifyMinutesOfDay: 9 * 60 };
 const at = (iso: string) => DateTime.fromISO(iso, { zone }).toJSDate();
 const local = (d: Date) => DateTime.fromJSDate(d, { zone }).toFormat("yyyy-MM-dd'T'HH:mm");
 
-const event = (over: Partial<Event>): Event =>
+const event = (over: Partial<EventWithExceptions>): EventWithExceptions =>
   ({
     id: 'e1',
     userId: 'u1',
@@ -26,8 +27,9 @@ const event = (over: Partial<Event>): Event =>
     status: 'SCHEDULED',
     remindersEnabled: true,
     reminderOffsets: [15],
+    exceptions: [],
     ...over,
-  }) as Event;
+  }) as EventWithExceptions;
 
 describe('planEventReminders', () => {
   it('reminds the chosen minutes before the start', () => {

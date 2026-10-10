@@ -247,6 +247,25 @@ reports `voice`.
   `eas.json` has development / preview / production profiles; see `docs/release.md`. CI runs every
   check against PostgreSQL 18 with `TZ=Asia/Kolkata`.
 
+## One-off changes to repeating events (Phase 8)
+
+| Route                                        | Notes                                              |
+| -------------------------------------------- | -------------------------------------------------- |
+| `POST /events/:id/occurrences/skip`          | `{ occurrence }`: exact start or local date        |
+| `POST /events/:id/occurrences/move`          | `{ occurrence, startAt, endAt?, allowConflicts? }` |
+| `DELETE /events/:id/exceptions/:exceptionId` | Restore the occurrence to the series' time         |
+
+- `EventException` rows (SKIPPED / MOVED) are keyed by the occurrence's **original** start, so an
+  occurrence can be moved repeatedly and still restored. A moved occurrence keeps the series'
+  length unless an end is given; the new time is checked for clashes.
+- One helper, `expandEvent`, applies exceptions; every expansion (agenda, clashes, reminders, day
+  plan, search) goes through it, and its type requires the exceptions to be loaded, so a call site
+  cannot forget them. Agenda occurrences carry `originalStart` and `moved`.
+- Changing the series' schedule (start, end, rule, timezone, buffers) deletes its exceptions, as
+  calendar apps do; editing the title or notes keeps them.
+- Assistant tools `skip_occurrence` / `move_occurrence` (a clashing move asks first). Verified live:
+  "Skip gym this Friday" and a Tamil "move this Sunday's gym to 8 am" changed only those days.
+
 ## Milestone plan
 
 0. Discovery ✅
@@ -257,3 +276,4 @@ reports `voice`.
 5. Tamil/English voice ✅
 6. Memory + daily planning ✅
 7. Hardening + release ✅ (store submission pending: needs EAS account, icons, privacy policy)
+8. One-off changes to repeating events ✅

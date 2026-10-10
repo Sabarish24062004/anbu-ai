@@ -6,5 +6,8 @@ export default defineConfig({
     setupFiles: ['./test/setup.ts'],
     // Integration tests share one test database; run files sequentially.
     fileParallelism: false,
+    // Password hashing is deliberately slow (scrypt, 128 MB); a busy machine needs headroom.
+    testTimeout: 20_000,
+    hookTimeout: 30_000,
   },
 });

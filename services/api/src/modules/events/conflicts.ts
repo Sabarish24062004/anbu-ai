@@ -3,6 +3,7 @@ import { parseRRule, type RecurrenceRule, type ScheduleConflict } from '@anbu/sh
 import { occurrencesInRange } from '../../common/recurrence';
 import type { PrismaClient } from '../../database/prisma';
 import type { Event } from '../../generated/prisma/client';
+import { expandEvent, withExceptions } from './occurrences';
 
 // Recurring events are checked this far ahead; further clashes surface when they get closer.
 const RECURRING_HORIZON_DAYS = 90;
@@ -75,20 +76,20 @@ export async function findConflicts(
         { endAt: null, startAt: { gte: new Date(windowStart) } },
       ],
     },
+    include: withExceptions,
     orderBy: { startAt: 'asc' },
   });
 
   const conflicts: ScheduleConflict[] = [];
   for (const other of others) {
-    const o = scheduleOf(other);
-    const otherStarts = occurrencesInRange(
-      o.start,
-      o.durationMs,
-      o.rule,
+    const bufferMs = (other.travelBufferMinutes + other.prepBufferMinutes) * 60_000;
+    const otherOccurrences = expandEvent(
+      other,
       DateTime.fromMillis(windowStart),
-      DateTime.fromMillis(windowEnd + o.bufferMs + 1),
+      DateTime.fromMillis(windowEnd + bufferMs + 1),
     );
-    for (const os of otherStarts) {
+    for (const { start: os, durationMs } of otherOccurrences) {
+      const o = { bufferMs, durationMs };
       const osMs = os.toMillis();
       const hit = starts.find((cs) => {
         const csMs = cs.toMillis();

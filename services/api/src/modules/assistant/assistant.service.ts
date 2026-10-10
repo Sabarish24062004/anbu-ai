@@ -17,7 +17,8 @@ import { audit } from '../../common/audit';
 import { AppError, notFound } from '../../common/errors';
 import type { PrismaClient } from '../../database/prisma';
 import type { ConversationMessage, Prisma } from '../../generated/prisma/client';
-import { cancelEvent, createEvent, updateEvent } from '../events/events.service';
+import { cancelEvent, createEvent, getEvent, updateEvent } from '../events/events.service';
+import { moveOccurrence } from '../events/exceptions.service';
 import { getActiveUser } from '../users/users.service';
 import {
   LlmError,
@@ -140,6 +141,22 @@ async function executePending(
         allowConflicts: true,
       });
       return eventAction('event.updated', event);
+    }
+    case 'move_occurrence': {
+      const { exception } = await moveOccurrence(prisma, userId, spec.eventId, {
+        occurrence: spec.occurrence,
+        startAt: spec.startAt,
+        endAt: spec.endAt,
+        allowConflicts: true,
+      });
+      const event = await getEvent(prisma, userId, spec.eventId);
+      return {
+        kind: 'event.occurrence_moved',
+        entityType: 'event',
+        entityId: spec.eventId,
+        title: event.title,
+        when: exception.startAt,
+      };
     }
     case 'cancel_event': {
       const event = await cancelEvent(prisma, userId, spec.eventId);

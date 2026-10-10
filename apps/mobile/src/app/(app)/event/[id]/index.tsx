@@ -1,5 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { Text, View } from 'react-native';
+import { OccurrenceCard } from '@/components/OccurrenceCard';
 import { Button, Card, ErrorBanner, Loading, Screen, useStyles } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatDate, formatTime } from '@/lib/datetime';
@@ -8,7 +9,8 @@ import { keys, useEvent, useInvalidatingMutation } from '@/lib/queries';
 import { useSession, useT } from '@/lib/session-context';
 
 export default function EventDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // `at`: the occurrence opened from the agenda (its original start), for repeating events.
+  const { id, at } = useLocalSearchParams<{ id: string; at?: string }>();
   const s = useStyles();
   const t = useT();
   const { language } = useSession();
@@ -72,6 +74,10 @@ export default function EventDetailScreen() {
           </Text>
         )}
       </Card>
+
+      {e.rrule && scheduled && (
+        <OccurrenceCard event={e} exceptions={query.data.exceptions} originalStart={at} />
+      )}
 
       {failed && <ErrorBanner message={errorMessage(failed, t)} />}
 

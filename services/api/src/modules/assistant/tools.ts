@@ -28,6 +28,7 @@ import {
   searchEvents,
   updateEvent,
 } from '../events/events.service';
+import { moveOccurrence, skipOccurrence } from '../events/exceptions.service';
 import { createImportantDate, listUpcoming } from '../important-dates/important-dates.service';
 import { forgetMemory, listMemories, saveMemory } from '../memory/memory.service';
 import { getDayPlan } from '../planning/planning.service';
@@ -45,6 +46,13 @@ export interface ToolContext {
 /** A change that waits for the user's "yes": a cancellation, or saving despite a clash. */
 export type PendingSpec =
   | { kind: 'create_event'; input: CreateEventInput }
+  | {
+      kind: 'move_occurrence';
+      eventId: string;
+      occurrence: string;
+      startAt: string;
+      endAt?: string;
+    }
   | { kind: 'update_event'; eventId: string; input: UpdateEventInput }
   | { kind: 'cancel_event'; eventId: string };
 
@@ -332,6 +340,96 @@ const TOOLS = {
         result: needsConfirmation(summary, []),
         pending: { spec: { kind: 'cancel_event', eventId }, summary, conflicts: [] },
       };
+    },
+  }),
+
+  skip_occurrence: tool({
+    spec: {
+      name: 'skip_occurrence',
+      description:
+        'Skip one occurrence of a repeating event (e.g. "no gym this Friday") without changing the series. occurrence is the local date YYYY-MM-DD, or the exact start from get_agenda.',
+      parameters: {
+        type: 'object',
+        properties: {
+          eventId: { type: 'string' },
+          occurrence: { type: 'string', description: 'YYYY-MM-DD, or the start from get_agenda.' },
+        },
+        required: ['eventId', 'occurrence'],
+      },
+    },
+    args: z.object({ eventId: z.uuid(), occurrence: z.string() }),
+    async run(ctx, { eventId, occurrence }) {
+      const event = await getEvent(ctx.prisma, ctx.userId, eventId);
+      const { exception } = await skipOccurrence(ctx.prisma, ctx.userId, eventId, occurrence);
+      return {
+        result: { status: 'skipped', originalStart: exception.originalStart },
+        action: {
+          kind: 'event.occurrence_skipped',
+          entityType: 'event',
+          entityId: eventId,
+          title: event.title,
+          when: exception.originalStart,
+        },
+      };
+    },
+  }),
+
+  move_occurrence: tool({
+    spec: {
+      name: 'move_occurrence',
+      description:
+        'Move one occurrence of a repeating event to another time without changing the series (e.g. "this Tuesday\'s class at 5 pm instead"). If the new time clashes the result is needs_confirmation.',
+      parameters: {
+        type: 'object',
+        properties: {
+          eventId: { type: 'string' },
+          occurrence: { type: 'string', description: 'YYYY-MM-DD, or the start from get_agenda.' },
+          newStartAt: { type: 'string', description: 'New local start, YYYY-MM-DDTHH:mm.' },
+          newEndAt: {
+            type: 'string',
+            description: 'Optional new local end; default keeps the length.',
+          },
+        },
+        required: ['eventId', 'occurrence', 'newStartAt'],
+      },
+    },
+    args: z.object({
+      eventId: z.uuid(),
+      occurrence: z.string(),
+      newStartAt: z.string(),
+      newEndAt: z.string().optional(),
+    }),
+    async run(ctx, a) {
+      const event = await getEvent(ctx.prisma, ctx.userId, a.eventId);
+      const input = { occurrence: a.occurrence, startAt: a.newStartAt, endAt: a.newEndAt };
+      try {
+        const { exception } = await moveOccurrence(ctx.prisma, ctx.userId, a.eventId, input);
+        return {
+          result: { status: 'moved', start: exception.startAt, end: exception.endAt },
+          action: {
+            kind: 'event.occurrence_moved',
+            entityType: 'event',
+            entityId: a.eventId,
+            title: event.title,
+            when: exception.startAt,
+          },
+        };
+      } catch (e) {
+        if (!(e instanceof AppError && e.code === 'SCHEDULE_CONFLICT')) throw e;
+        const conflicts = (e.details as { conflicts: ScheduleConflict[] }).conflicts;
+        const summary = messages(ctx.language).confirmMoveOccurrence(
+          event.title,
+          formatWhen(a.newStartAt, ctx.language),
+        );
+        return {
+          result: needsConfirmation(summary, conflicts),
+          pending: {
+            spec: { kind: 'move_occurrence', eventId: a.eventId, ...input },
+            summary,
+            conflicts,
+          },
+        };
+      }
     },
   }),
 

@@ -94,7 +94,13 @@ export default function AgendaScreen() {
             {items.map((o) => (
               <Card
                 key={`${o.eventId}-${o.start}`}
-                onPress={() => router.push(`/event/${o.eventId}`)}
+                onPress={() =>
+                  router.push(
+                    o.event.rrule
+                      ? `/event/${o.eventId}?at=${encodeURIComponent(o.originalStart)}`
+                      : `/event/${o.eventId}`,
+                  )
+                }
               >
                 <Text style={s.muted}>
                   {o.event.allDay
@@ -110,6 +116,7 @@ export default function AgendaScreen() {
                   {o.event.title}
                 </Text>
                 {o.event.location ? <Text style={s.muted}>{o.event.location}</Text> : null}
+                {o.moved ? <Text style={s.muted}>{t.movedOccurrence}</Text> : null}
               </Card>
             ))}
           </View>

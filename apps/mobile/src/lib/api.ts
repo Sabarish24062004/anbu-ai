@@ -11,7 +11,10 @@ import {
   type CreateTaskInput,
   type DayPlanDto,
   type MemoryDto,
+  type EventDetailResponse,
   type EventDto,
+  type EventExceptionDto,
+  type MoveOccurrenceInput,
   type EventMutationResponse,
   type EventOccurrenceDto,
   type HealthResponse,
@@ -118,7 +121,19 @@ export const api = {
     request<{ from: string; to: string; occurrences: EventOccurrenceDto[] }>('/events', {
       query: { from, to },
     }),
-  event: (id: string) => request<{ event: EventDto }>(`/events/${id}`),
+  event: (id: string) => request<EventDetailResponse>(`/events/${id}`),
+  skipOccurrence: (id: string, occurrence: string) =>
+    request<{ exception: EventExceptionDto }>(`/events/${id}/occurrences/skip`, {
+      method: 'POST',
+      body: { occurrence },
+    }),
+  moveOccurrence: (id: string, input: MoveOccurrenceInput) =>
+    request<{ exception: EventExceptionDto }>(`/events/${id}/occurrences/move`, {
+      method: 'POST',
+      body: input,
+    }),
+  restoreOccurrence: (id: string, exceptionId: string) =>
+    request<void>(`/events/${id}/exceptions/${exceptionId}`, { method: 'DELETE' }),
   createEvent: (input: CreateEventInput, idempotencyKey?: string) =>
     request<EventMutationResponse>('/events', { method: 'POST', body: input, idempotencyKey }),
   updateEvent: (id: string, input: UpdateEventInput, idempotencyKey?: string) =>

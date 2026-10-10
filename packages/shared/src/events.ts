@@ -113,5 +113,42 @@ export interface EventOccurrenceDto {
   eventId: string;
   start: string;
   end: string;
+  /** Where the series' rule puts this occurrence; identifies it when skipping or moving it. */
+  originalStart: string;
+  /** True when this one occurrence was moved away from its usual time. */
+  moved: boolean;
   event: EventDto;
+}
+
+/**
+ * One occurrence of a recurring event: its exact start as listed (ISO with offset), or its local
+ * date ("2027-03-12") when there is one occurrence that day.
+ */
+const occurrenceRef = dateTimeInputSchema;
+
+export const skipOccurrenceSchema = z.strictObject({ occurrence: occurrenceRef });
+
+export const moveOccurrenceSchema = z.strictObject({
+  occurrence: occurrenceRef,
+  /** New local start in the event's timezone (or with an offset). */
+  startAt: dateTimeInputSchema,
+  /** Omit to keep the series' duration. */
+  endAt: dateTimeInputSchema.nullish(),
+  allowConflicts,
+});
+export type MoveOccurrenceInput = z.input<typeof moveOccurrenceSchema>;
+
+export interface EventExceptionDto {
+  id: string;
+  /** Where the rule put the occurrence. */
+  originalStart: string;
+  kind: 'SKIPPED' | 'MOVED';
+  startAt: string | null;
+  endAt: string | null;
+}
+
+export interface EventDetailResponse {
+  event: EventDto;
+  /** Skipped and moved occurrences of a recurring event. */
+  exceptions: EventExceptionDto[];
 }

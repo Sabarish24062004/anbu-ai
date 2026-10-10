@@ -63,6 +63,8 @@ export const ASSISTANT_ACTION_KINDS = [
   'event.created',
   'event.updated',
   'event.cancelled',
+  'event.occurrence_skipped',
+  'event.occurrence_moved',
   'task.created',
   'task.completed',
   'task.rescheduled',
@@ -84,7 +86,7 @@ export interface AssistantActionDto {
 
 export interface PendingActionDto {
   id: string;
-  kind: 'create_event' | 'update_event' | 'cancel_event';
+  kind: 'create_event' | 'update_event' | 'cancel_event' | 'move_occurrence';
   /** One-line description in the user's language, e.g. "Cancel “Dentist” on Fri 14 Mar, 10:00". */
   summary: string;
   conflicts: ScheduleConflict[];
