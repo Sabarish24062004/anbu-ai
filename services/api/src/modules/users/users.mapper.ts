@@ -22,5 +22,6 @@ export function toPreferencesDto(pref: UserPreference): PreferencesDto {
     sleepMinutes: pref.sleepMinutes,
     importantDateNotifyMinutes: pref.importantDateNotifyMinutes,
     voiceResponsesEnabled: pref.voiceResponsesEnabled,
+    dailyBriefEnabled: pref.dailyBriefEnabled,
   };
 }

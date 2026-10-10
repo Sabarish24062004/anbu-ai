@@ -16,7 +16,8 @@ Architecture and decisions: [docs/architecture.md](docs/architecture.md).
 | 3. Reminders (worker, local notifications, due/snooze)      | ✅ Built — needs on-device testing              |
 | 4. Assistant (Gemini tool-calling, confirmations, chat tab) | ✅ Built — needs a Gemini key to try            |
 | 5. Voice (speak to the assistant, replies read aloud)       | ✅ Built — Tamil speech needs on-device testing |
-| 6–7. Memory, release                                        | Not started                                     |
+| 6. Memory, day planning, morning brief                      | ✅ Built — needs on-device testing              |
+| 7. Hardening + release                                      | Not started                                     |
 
 ## Repository layout
 

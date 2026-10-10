@@ -9,6 +9,8 @@ import {
   type CreateEventInput,
   type CreateImportantDateInput,
   type CreateTaskInput,
+  type DayPlanDto,
+  type MemoryDto,
   type EventDto,
   type EventMutationResponse,
   type EventOccurrenceDto,
@@ -177,6 +179,11 @@ export const api = {
       `/assistant/conversations/${conversationId}/pending/${pendingId}/${decision}`,
       { method: 'POST' },
     ),
+
+  dayPlan: (date: string) => request<{ plan: DayPlanDto }>('/planning/day', { query: { date } }),
+  memories: () => request<{ memories: MemoryDto[] }>('/memories'),
+  deleteMemory: (id: string) => request<void>(`/memories/${id}`, { method: 'DELETE' }),
+  deleteAllMemories: () => request<{ deleted: number }>('/memories', { method: 'DELETE' }),
 
   upcomingReminders: (hours: number) =>
     request<{ reminders: ReminderDto[] }>('/reminders/upcoming', { query: { hours } }),

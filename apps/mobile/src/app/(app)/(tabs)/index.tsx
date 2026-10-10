@@ -47,7 +47,14 @@ export default function AgendaScreen() {
           {t.greeting} {session.user.displayName}
         </Text>
       ) : null}
-      <Button label={t.addEvent} onPress={() => router.push('/event/new')} />
+      <View style={[s.row, { flexWrap: 'wrap' }]}>
+        <View style={{ flexGrow: 1 }}>
+          <Button label={t.addEvent} onPress={() => router.push('/event/new')} />
+        </View>
+        <View style={{ flexGrow: 1 }}>
+          <Button label={t.planMyDay} variant="secondary" onPress={() => router.push('/plan')} />
+        </View>
+      </View>
       <DueReminders />
 
       {dates.data?.upcoming.length ? (

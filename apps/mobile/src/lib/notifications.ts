@@ -1,6 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-import type { Language, ReminderDto } from '@anbu/shared';
+import type { DayPlanDto, Language, ReminderDto } from '@anbu/shared';
 import type { Strings } from '@/i18n/strings';
 import { formatTime } from './datetime';
 
@@ -101,6 +101,41 @@ export async function scheduleReminders(reminders: ReminderDto[], t: Strings, la
       },
     });
   }
+}
+
+const BRIEF_ID = 'daily-brief';
+
+/** One-line summary of a day plan, e.g. "3 events, first at 9:00 · 2 tasks to fit in". */
+export function briefBody(plan: DayPlanDto, t: Strings, lang: Language): string {
+  const first = plan.events[0];
+  const parts = [t.briefEvents(plan.events.length, first ? formatTime(first.start, lang) : '')];
+  const tasks = plan.suggestions.length + plan.unscheduled.length;
+  if (tasks) parts.push(t.briefTasks(tasks));
+  const date = plan.importantDates[0];
+  if (date && date.daysUntil <= 1) parts.push(t.briefDate(date.title, date.daysUntil));
+  return parts.join(' · ');
+}
+
+/**
+ * Schedules the morning brief for `at` with the plan for that day. Call after scheduleReminders,
+ * which clears every scheduled notification first.
+ */
+export async function scheduleDailyBrief(at: Date, plan: DayPlanDto, t: Strings, lang: Language) {
+  if (Platform.OS === 'web' || at.getTime() <= Date.now() + MIN_LEAD_MS) return;
+  await Notifications.scheduleNotificationAsync({
+    identifier: BRIEF_ID,
+    content: {
+      title: t.briefTitle,
+      body: briefBody(plan, t, lang),
+      data: { path: '/plan' },
+      sound: true,
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: at,
+      channelId: CHANNEL_ID,
+    },
+  });
 }
 
 export async function clearScheduledReminders() {

@@ -23,6 +23,8 @@ export default function AppLayout() {
       <Stack.Screen name="task/[id]" options={{ title: t.editTask }} />
       <Stack.Screen name="date/new" options={{ title: t.newDate, presentation: 'modal' }} />
       <Stack.Screen name="date/[id]" options={{ title: t.editDate }} />
+      <Stack.Screen name="plan" options={{ title: t.plan }} />
+      <Stack.Screen name="memories" options={{ title: t.memories }} />
     </Stack>
   );
 }

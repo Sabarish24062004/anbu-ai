@@ -14,6 +14,8 @@ export const keys = {
   dates: ['important-dates'] as const,
   date: (id: string) => ['important-dates', 'detail', id] as const,
   reminders: ['reminders'] as const,
+  plan: ['plan'] as const,
+  memories: ['memories'] as const,
 };
 
 // How far ahead the phone schedules local notifications. iOS keeps at most 64 pending.
@@ -64,6 +66,18 @@ export function useImportantDate(id: string) {
   return useQuery({ queryKey: keys.date(id), queryFn: () => api.importantDate(id) });
 }
 
+export function useDayPlan(date: string, enabled = true) {
+  return useQuery({
+    queryKey: [...keys.plan, date],
+    queryFn: () => api.dayPlan(date),
+    enabled,
+  });
+}
+
+export function useMemories() {
+  return useQuery({ queryKey: keys.memories, queryFn: api.memories });
+}
+
 export function useUpcomingReminders() {
   return useQuery({
     queryKey: [...keys.reminders, 'upcoming'],
@@ -96,7 +110,7 @@ export function useInvalidatingMutation<TVars, TResult>(
     onSuccess: (result) => {
       beforeInvalidate?.(result);
       return Promise.all(
-        [...invalidate, keys.reminders].map((queryKey) =>
+        [...invalidate, keys.reminders, keys.plan].map((queryKey) =>
           queryClient.invalidateQueries({ queryKey }),
         ),
       );

@@ -29,6 +29,8 @@ import {
   updateEvent,
 } from '../events/events.service';
 import { createImportantDate, listUpcoming } from '../important-dates/important-dates.service';
+import { forgetMemory, listMemories, saveMemory } from '../memory/memory.service';
+import { getDayPlan } from '../planning/planning.service';
 import { completeTask, createTask, listTasks } from '../tasks/tasks.service';
 import type { ToolSpec } from './llm/types';
 import { formatWhen, messages } from './messages';
@@ -471,6 +473,94 @@ const TOOLS = {
     },
   }),
 
+  plan_day: tool({
+    spec: {
+      name: 'plan_day',
+      description:
+        'Plan a day: events (with travel time), free time between them within the user’s waking hours, and suggested times for overdue, due and high-priority tasks. Use for "plan my day", "am I free…", "when can I…". Suggestions are not saved.',
+      parameters: {
+        type: 'object',
+        properties: {
+          date: { type: 'string', description: 'Local date YYYY-MM-DD; default today.' },
+        },
+      },
+    },
+    args: z.object({
+      date: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .optional(),
+    }),
+    async run(ctx, { date }) {
+      const plan = await getDayPlan(ctx.prisma, ctx.userId, date);
+      return { result: plan };
+    },
+  }),
+
+  remember: tool({
+    spec: {
+      name: 'remember',
+      description:
+        'Save a lasting fact or preference the user explicitly told you (e.g. wake time, gym location, how they like reminders). Only when the user states it about themselves or asks you to remember. Never store passwords, PINs, OTPs, bank, card or ID numbers, or health details unless the user explicitly asks you to remember that exact thing. Saving an existing key replaces it.',
+      parameters: {
+        type: 'object',
+        properties: {
+          key: { type: 'string', description: 'Short snake_case name, e.g. "wake_time".' },
+          value: { type: 'string', description: 'The fact, in the user’s words.' },
+          category: {
+            type: 'string',
+            description: 'Optional: routine, people, places, preferences.',
+          },
+        },
+        required: ['key', 'value'],
+      },
+    },
+    args: z.object({ key: z.string(), value: z.string(), category: z.string().optional() }),
+    async run(ctx, a) {
+      const m = await saveMemory(ctx.prisma, ctx.userId, a);
+      return {
+        result: { status: 'saved', key: m.key, value: m.value },
+        action: {
+          kind: 'memory.saved',
+          entityType: 'memory',
+          entityId: m.id,
+          title: memoryLabel(m.key, m.value),
+          when: null,
+        },
+      };
+    },
+  }),
+
+  forget: tool({
+    spec: {
+      name: 'forget',
+      description: 'Forget one saved fact, by its key (see the facts in your instructions).',
+      parameters: {
+        type: 'object',
+        properties: { key: { type: 'string' } },
+        required: ['key'],
+      },
+    },
+    args: z.object({ key: z.string().min(1).max(60) }),
+    async run(ctx, { key }) {
+      const memories = await listMemories(ctx.prisma, ctx.userId);
+      const match = memories.find((m) => m.key === key.trim().toLowerCase());
+      if (!match || !(await forgetMemory(ctx.prisma, ctx.userId, { id: match.id }))) {
+        return { result: { error: 'NOT_FOUND', message: `Nothing saved under ${key}` } };
+      }
+      return {
+        result: { status: 'forgotten', key: match.key },
+        action: {
+          kind: 'memory.forgotten',
+          entityType: 'memory',
+          entityId: match.id,
+          title: memoryLabel(match.key, match.value),
+          when: null,
+        },
+      };
+    },
+  }),
+
   list_upcoming_dates: tool({
     spec: {
       name: 'list_upcoming_dates',
@@ -497,6 +587,9 @@ const TOOLS = {
     },
   }),
 };
+
+/** "gym time: 6 am": the value alone is often meaningless out of context. */
+const memoryLabel = (key: string, value: string) => `${key.replace(/_/g, ' ')}: ${value}`;
 
 export type ToolName = keyof typeof TOOLS | 'confirm_pending_action' | 'decline_pending_action';
 

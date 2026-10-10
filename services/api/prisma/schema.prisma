@@ -130,6 +130,8 @@ model UserPreference {
   sleepMinutes               Int?
   importantDateNotifyMinutes Int      @default(540) // time of day for birthday reminders
   voiceResponsesEnabled      Boolean  @default(true)
+  // A notification at wake time with the day's plan (scheduled by the app).
+  dailyBriefEnabled          Boolean  @default(true)
   updatedAt                  DateTime @updatedAt @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -56,6 +56,7 @@ export const updatePreferencesSchema = z
     sleepMinutes: minuteOfDay.nullable(),
     importantDateNotifyMinutes: minuteOfDay,
     voiceResponsesEnabled: z.boolean(),
+    dailyBriefEnabled: z.boolean(),
   })
   .partial();
 export type UpdatePreferencesInput = z.input<typeof updatePreferencesSchema>;
@@ -78,6 +79,7 @@ export interface PreferencesDto {
   sleepMinutes: number | null;
   importantDateNotifyMinutes: number;
   voiceResponsesEnabled: boolean;
+  dailyBriefEnabled: boolean;
 }
 
 export interface AuthTokens {

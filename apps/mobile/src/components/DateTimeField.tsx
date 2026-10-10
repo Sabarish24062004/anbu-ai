@@ -6,9 +6,14 @@ import { localeFor, toLocalDateString, toLocalDateTimeString } from '@/lib/datet
 import { useColors } from '@/theme/colors';
 import { Field, useStyles } from './ui';
 
-type Mode = 'date' | 'datetime';
+type Mode = 'date' | 'datetime' | 'time';
 
 function formatLocal(d: Date, mode: Mode, lang: Language) {
+  if (mode === 'time') {
+    return new Intl.DateTimeFormat(localeFor(lang), { hour: 'numeric', minute: '2-digit' }).format(
+      d,
+    );
+  }
   return new Intl.DateTimeFormat(localeFor(lang), {
     weekday: 'short',
     day: 'numeric',
@@ -60,6 +65,16 @@ export function DateTimeField({
 
   if (Platform.OS === 'android') {
     const open = () => {
+      if (mode === 'time') {
+        DateTimePickerAndroid.open({
+          value,
+          mode: 'time',
+          onChange: (event, time) => {
+            if (event.type === 'set' && time) onChange(time);
+          },
+        });
+        return;
+      }
       DateTimePickerAndroid.open({
         value,
         mode: 'date',
@@ -107,7 +122,12 @@ function WebDateTimeInput({
   error?: string;
 }) {
   const s = useStyles();
-  const format = mode === 'date' ? toLocalDateString : toLocalDateTimeString;
+  const format =
+    mode === 'date'
+      ? toLocalDateString
+      : mode === 'time'
+        ? (d: Date) => toLocalDateTimeString(d).slice(11)
+        : toLocalDateTimeString;
   const [text, setText] = useState(format(value));
   return (
     <Field label={label} error={error}>
@@ -115,11 +135,19 @@ function WebDateTimeInput({
         value={text}
         onChangeText={setText}
         onBlur={() => {
-          const parsed = new Date(mode === 'date' ? `${text}T00:00` : text);
+          const parsed = new Date(
+            mode === 'date'
+              ? `${text}T00:00`
+              : mode === 'time'
+                ? `${toLocalDateString(value)}T${text}`
+                : text,
+          );
           if (!Number.isNaN(parsed.getTime())) onChange(parsed);
           else setText(format(value));
         }}
-        placeholder={mode === 'date' ? 'YYYY-MM-DD' : 'YYYY-MM-DDTHH:mm'}
+        placeholder={
+          mode === 'date' ? 'YYYY-MM-DD' : mode === 'time' ? 'HH:mm' : 'YYYY-MM-DDTHH:mm'
+        }
         accessibilityLabel={label}
         style={s.input}
       />

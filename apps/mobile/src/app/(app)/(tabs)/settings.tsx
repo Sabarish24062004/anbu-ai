@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, Text, View } from 'react-native';
 import {
@@ -21,7 +21,8 @@ import {
 } from '@/components/ui';
 import { api, fetchHealth } from '@/lib/api';
 import { getApiBaseUrl } from '@/lib/config';
-import { deviceTimezone } from '@/lib/datetime';
+import { dateToMinutes, deviceTimezone, minutesToDate } from '@/lib/datetime';
+import { DateTimeField } from '@/components/DateTimeField';
 import { errorMessage } from '@/lib/errors';
 import { ApiError } from '@/lib/http';
 import { getPermission, requestPermission, type PermissionState } from '@/lib/notifications';
@@ -109,6 +110,35 @@ export default function SettingsScreen() {
               {me.data.preferences.voiceResponsesEnabled && <TamilVoiceNote />}
             </>
           )}
+          <Text style={s.section} accessibilityRole="header">
+            {t.routine}
+          </Text>
+          <DateTimeField
+            label={t.wakeTime}
+            mode="time"
+            language={me.data.user.language}
+            value={minutesToDate(me.data.preferences.wakeMinutes ?? 7 * 60)}
+            onChange={(d) =>
+              void apply(() => api.updatePreferences({ wakeMinutes: dateToMinutes(d) }))
+            }
+          />
+          <DateTimeField
+            label={t.sleepTime}
+            mode="time"
+            language={me.data.user.language}
+            value={minutesToDate(me.data.preferences.sleepMinutes ?? 22 * 60)}
+            onChange={(d) =>
+              void apply(() => api.updatePreferences({ sleepMinutes: dateToMinutes(d) }))
+            }
+          />
+          {Platform.OS !== 'web' && (
+            <SwitchRow
+              label={t.morningBrief}
+              value={me.data.preferences.dailyBriefEnabled}
+              onChange={(on) => void apply(() => api.updatePreferences({ dailyBriefEnabled: on }))}
+            />
+          )}
+          <Button label={t.memories} variant="secondary" onPress={() => router.push('/memories')} />
           <View style={{ gap: 6 }}>
             <Text style={s.label}>{t.timezone}</Text>
             <Text style={s.body}>{me.data.user.timezone}</Text>

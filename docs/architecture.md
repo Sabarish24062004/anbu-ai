@@ -189,6 +189,32 @@ reports `voice`.
   calls, so the free tier's per-minute limit is reached after a few messages; the app then shows
   "busy".
 
+## Memory and planning (Phase 6)
+
+| Route                                          | Notes                                                |
+| ---------------------------------------------- | ---------------------------------------------------- |
+| `GET/POST /memories`, `DELETE /memories[/:id]` | What the assistant remembers; replace by key; forget |
+| `GET /planning/day?date`                       | Deterministic plan for a local day (default today)   |
+
+### Phase 6 decisions
+
+- **Memory is explicit.** The assistant saves a fact (`remember`) only when the user states it about
+  themselves or asks; it can `forget`. Facts are shown in the prompt as data, never instructions.
+  Values that look like card, account, ID or OTP numbers are rejected by the server regardless of
+  what the model does. Limit 100 per user. Users see and delete everything under Settings.
+- **The planner is deterministic** (no model, works offline): the day window is wake → sleep
+  (defaults 07:00–22:00; a sleep time before the wake time means after midnight), starting at the
+  current time (rounded up to 5 minutes) once the day has begun. Events block their time plus
+  travel/prep; events without an end block 30 minutes; all-day events do not block time.
+- **Task suggestions** in order: overdue, then due that day (placed before the due time when
+  possible, flagged `afterDue` otherwise), then undated high/urgent tasks. Length is
+  `estimatedMinutes` (default 30, 5–240). Blocked tasks and tasks that do not fit are listed
+  separately. Suggestions are not saved; `freeSlots` is the time left after them.
+- **Morning brief.** The app schedules one local notification at the next wake time with a summary
+  of that day's plan, refreshed whenever reminders sync (`dailyBriefEnabled`, default on).
+- **Verified live (2026-10-10):** a stated habit was remembered; "plan my day" was answered from the
+  plan; a request (in Tamil) to remember a card number was refused.
+
 ## Milestone plan
 
 0. Discovery ✅
@@ -197,5 +223,5 @@ reports `voice`.
 3. Reminders (worker, restart recovery, dedupe, local notifications) ✅
 4. Assistant tool-calling ✅
 5. Tamil/English voice ✅
-6. Memory + daily planning
+6. Memory + daily planning ✅
 7. Hardening + release

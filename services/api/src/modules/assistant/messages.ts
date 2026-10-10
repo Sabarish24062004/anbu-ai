@@ -33,6 +33,8 @@ const T = {
     'task.completed': (t: string) => `Marked “${t}” as done.`,
     'task.rescheduled': (t: string, w: string) => `Done! “${t}” is next due ${w}.`,
     'important_date.created': (t: string, w: string) => `Saved “${t}”${w ? ` (${w})` : ''}.`,
+    'memory.saved': (t: string) => `I’ll remember: ${t}.`,
+    'memory.forgotten': (t: string) => `Forgotten: ${t}.`,
     confirmCreate: (t: string, w: string) => `Add “${t}” on ${w} even though it overlaps`,
     confirmUpdate: (t: string, w: string) => `Move “${t}” to ${w} even though it overlaps`,
     confirmCancel: (t: string, w: string) => `Cancel “${t}”${w ? ` on ${w}` : ''}`,
@@ -51,6 +53,8 @@ const T = {
     'task.rescheduled': (t: string, w: string) => `முடிந்தது! “${t}” அடுத்த கெடு ${w}.`,
     'important_date.created': (t: string, w: string) =>
       `“${t}” சேமிக்கப்பட்டது${w ? ` (${w})` : ''}.`,
+    'memory.saved': (t: string) => `நினைவில் வைத்துக்கொண்டேன்: ${t}.`,
+    'memory.forgotten': (t: string) => `மறந்துவிட்டேன்: ${t}.`,
     confirmCreate: (t: string, w: string) => `நேரம் மோதினாலும் “${t}” ஐ ${w} அன்று சேர்க்கவா`,
     confirmUpdate: (t: string, w: string) => `நேரம் மோதினாலும் “${t}” ஐ ${w} க்கு மாற்றவா`,
     confirmCancel: (t: string, w: string) => `“${t}”${w ? ` (${w})` : ''} ஐ ரத்து செய்யவா`,

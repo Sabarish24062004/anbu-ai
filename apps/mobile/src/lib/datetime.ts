@@ -69,6 +69,24 @@ export function wallToLocalDate(iso: string): Date {
   return new Date(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi));
 }
 
+/** A Date today at `minutes` after midnight (for time pickers). */
+export function minutesToDate(minutes: number): Date {
+  const d = startOfToday();
+  d.setMinutes(minutes);
+  return d;
+}
+
+export const dateToMinutes = (d: Date) => d.getHours() * 60 + d.getMinutes();
+
+/** "1 h 30 min" style duration. */
+export function formatDuration(totalMinutes: number, lang: Language): string {
+  const h = Math.floor(totalMinutes / 60);
+  const m = Math.round(totalMinutes % 60);
+  if (lang === 'ta')
+    return [h ? `${h} மணி` : '', m ? `${m} நிமி` : ''].filter(Boolean).join(' ') || '0';
+  return [h ? `${h} h` : '', m ? `${m} min` : ''].filter(Boolean).join(' ') || '0 min';
+}
+
 export function addDays(d: Date, days: number): Date {
   const next = new Date(d);
   next.setDate(next.getDate() + days);

@@ -4,6 +4,8 @@ export * from './constants';
 export * from './events';
 export * from './health';
 export * from './important-dates';
+export * from './memory';
+export * from './planning';
 export * from './recurrence';
 export * from './reminders';
 export * from './tasks';

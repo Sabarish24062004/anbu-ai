@@ -41,6 +41,7 @@ const MAX_MODEL_CALLS = 6;
 const MAX_TOOL_CALLS_PER_STEP = 8;
 const PENDING_TTL_MS = 30 * 60_000;
 const PENDING_TOOL = 'pending_action';
+const MEMORIES_IN_PROMPT = 40;
 
 export interface AssistantDeps {
   prisma: PrismaClient;
@@ -202,6 +203,12 @@ export async function handleMessage(
     .reverse()
     .map((m) => ({ role: m.role === 'USER' ? 'user' : 'assistant', text: m.content }));
   let pending = conversation ? await activePending(prisma, conversation.id, now) : null;
+  const memories = await prisma.memory.findMany({
+    where: { userId, isSensitive: false },
+    orderBy: { updatedAt: 'desc' },
+    take: MEMORIES_IN_PROMPT,
+    select: { key: true, value: true },
+  });
 
   const ctx: ToolContext = { prisma, userId, timezone: user.timezone, language };
   const session = llm.startTurn({
@@ -213,6 +220,7 @@ export async function handleMessage(
       replyLanguage: language,
       now: DateTime.fromJSDate(now),
       pendingSummary: pending?.payload.summary ?? null,
+      memories,
     }),
     history,
     userText: input.text,

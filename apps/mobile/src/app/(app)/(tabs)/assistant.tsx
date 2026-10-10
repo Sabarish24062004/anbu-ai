@@ -44,11 +44,12 @@ type TurnInput =
 const CONVERSATION_KEY = ['assistant', 'conversation'] as const;
 
 const pathFor = (a: AssistantActionDto) =>
-  a.entityType === 'event'
-    ? `/event/${a.entityId}`
-    : a.entityType === 'task'
-      ? `/task/${a.entityId}`
-      : `/date/${a.entityId}`;
+  ({
+    event: `/event/${a.entityId}`,
+    task: `/task/${a.entityId}`,
+    importantDate: `/date/${a.entityId}`,
+    memory: '/memories',
+  })[a.entityType];
 
 export default function AssistantScreen() {
   const colors = useColors();
@@ -75,7 +76,14 @@ export default function AssistantScreen() {
   // Anything the assistant changed must show up in the other tabs and in scheduled reminders.
   const refreshData = (actions: AssistantActionDto[]) => {
     if (!actions.length) return;
-    for (const k of [keys.events, keys.tasks, keys.dates, keys.reminders]) {
+    for (const k of [
+      keys.events,
+      keys.tasks,
+      keys.dates,
+      keys.reminders,
+      keys.plan,
+      keys.memories,
+    ]) {
       void queryClient.invalidateQueries({ queryKey: k });
     }
   };

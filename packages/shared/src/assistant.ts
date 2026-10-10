@@ -67,13 +67,15 @@ export const ASSISTANT_ACTION_KINDS = [
   'task.completed',
   'task.rescheduled',
   'important_date.created',
+  'memory.saved',
+  'memory.forgotten',
 ] as const;
 export type AssistantActionKind = (typeof ASSISTANT_ACTION_KINDS)[number];
 
 /** Something the assistant actually changed, taken from the service result, not the model text. */
 export interface AssistantActionDto {
   kind: AssistantActionKind;
-  entityType: 'event' | 'task' | 'importantDate';
+  entityType: 'event' | 'task' | 'importantDate' | 'memory';
   entityId: string;
   title: string;
   /** Local start/due time with offset, or "YYYY-MM-DD" for dates. */
