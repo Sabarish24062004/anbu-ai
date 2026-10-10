@@ -10,10 +10,13 @@ const STALE_PROCESSING_MS = 5 * 60_000;
 const MISSED_AFTER_MS = 10 * 60_000;
 const RETRY_DELAY_MS = 60_000;
 
-/** Delivers one reminder over one channel. Throwing means "not delivered". */
+/**
+ * Delivers one reminder over one channel. Throwing means "not delivered"; 'skipped' means the
+ * channel does not apply (e.g. no phone registered for push) and is not recorded as an attempt.
+ */
 export interface ReminderChannel {
   name: DeliveryChannel;
-  deliver(reminder: Reminder): Promise<void>;
+  deliver(reminder: Reminder): Promise<'delivered' | 'skipped'>;
 }
 
 /**
@@ -23,7 +26,7 @@ export interface ReminderChannel {
  */
 export const inAppChannel: ReminderChannel = {
   name: 'IN_APP',
-  deliver: async () => undefined,
+  deliver: async () => 'delivered',
 };
 
 export interface DispatchResult {
@@ -103,7 +106,7 @@ async function deliverOne(
     [];
   for (const channel of channels) {
     try {
-      await channel.deliver(reminder);
+      if ((await channel.deliver(reminder)) === 'skipped') continue;
       delivered = true;
       attempts.push({ channel: channel.name, result: 'SUCCESS' });
     } catch (e) {

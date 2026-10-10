@@ -1,0 +1,5 @@
+# Keep LF line endings in the repository and working copies on every OS (Prettier expects LF).
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.wav binary

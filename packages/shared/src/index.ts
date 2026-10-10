@@ -1,6 +1,7 @@
 export * from './assistant';
 export * from './auth';
 export * from './constants';
+export * from './devices';
 export * from './events';
 export * from './health';
 export * from './important-dates';

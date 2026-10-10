@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: anbu_ai_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Test-only values: a throwaway database and secret, no real credentials.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/anbu_ai_test?schema=public
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/anbu_ai_test?schema=public
+      JWT_ACCESS_SECRET: ci-only-secret-that-is-at-least-32-characters-long
+      TZ: Asia/Kolkata # catches code that depends on the server's local time zone
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run db:generate -w @anbu/api
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm test

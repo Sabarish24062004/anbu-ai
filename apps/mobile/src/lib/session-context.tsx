@@ -10,6 +10,7 @@ import {
 import { DEFAULT_LANGUAGE, type AuthResponse, type Language } from '@anbu/shared';
 import { STRINGS, type Strings } from '@/i18n/strings';
 import { clearScheduledReminders } from './notifications';
+import { unregisterPush } from './push';
 import { sessionStore, type Session } from './session';
 
 interface SessionContextValue {
@@ -41,6 +42,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     // The next person to use this phone must not get this account's reminders.
     await clearScheduledReminders().catch(() => undefined);
+    await unregisterPush(); // needs the session, so before signing out
     await sessionStore.signOut();
   }, []);
 

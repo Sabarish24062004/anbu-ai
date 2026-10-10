@@ -215,6 +215,38 @@ reports `voice`.
 - **Verified live (2026-10-10):** a stated habit was remembered; "plan my day" was answered from the
   plan; a request (in Tamil) to remember a card number was refused.
 
+## Hardening (Phase 7)
+
+| Route                                  | Notes                                                   |
+| -------------------------------------- | ------------------------------------------------------- |
+| `POST /me/password`                    | Change password; revokes every other session            |
+| `GET /me/export`                       | All the user's data as one JSON file (no secrets)       |
+| `DELETE /me`                           | Delete the account and all its data (password required) |
+| `POST /devices`, `/devices/unregister` | Expo push tokens of phones running an EAS build         |
+
+### Phase 7 decisions
+
+- **Rate limits** (in memory, per process): 300 requests/min per IP overall; 10 failed sign-ins per
+  15 min per IP and per account; 10 registrations/hour per IP; 60 refreshes/15 min; 20 assistant
+  turns/min per user (protects the model quota). Errors use the normal shape, code `RATE_LIMITED`.
+- **Exposure fixes from review:** voice bodies (3 MB) are parsed only after authentication;
+  `trust proxy` is configurable (`TRUST_PROXY_HOPS`, default 0) so client IPs cannot be faked;
+  at most 4 password hashes (128 MB each) run at once; registration can be closed
+  (`REGISTRATION_OPEN=false`) for a personal server.
+- **Account rights:** export everything (password hash, token hashes and idempotency records are
+  excluded) and delete everything; deletion leaves a detached audit entry. Access tokens of a
+  deleted or re-passworded account stop working at the next database check (most routes), and
+  expire within 15 minutes regardless.
+- **Maintenance** (hourly, in the worker): delete expired idempotency keys, expired refresh tokens
+  (revoked ones are kept until expiry for replay detection) and reminder history older than 90 days.
+- **Remote push** via Expo's push service as a second delivery channel. A phone registers only when
+  it has an EAS project id (not Expo Go); it then stops scheduling local reminder notifications so
+  alerts are not doubled, but keeps the local morning brief. `DeviceNotRegistered` retires a token;
+  HTTP errors make the dispatcher retry. Push receipts are not checked yet.
+- **Release:** `tsx` and `prisma` are runtime dependencies (start and migrate without dev tools);
+  `eas.json` has development / preview / production profiles; see `docs/release.md`. CI runs every
+  check against PostgreSQL 18 with `TZ=Asia/Kolkata`.
+
 ## Milestone plan
 
 0. Discovery ✅
@@ -224,4 +256,4 @@ reports `voice`.
 4. Assistant tool-calling ✅
 5. Tamil/English voice ✅
 6. Memory + daily planning ✅
-7. Hardening + release
+7. Hardening + release ✅ (store submission pending: needs EAS account, icons, privacy policy)

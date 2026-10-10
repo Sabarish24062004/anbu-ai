@@ -178,6 +178,21 @@ const en = {
   errorTaskBlocked: 'Finish the task this one depends on first.',
   errorGeneric: 'Something went wrong. Please try again.',
   retry: 'Try again',
+  account: 'Account',
+  registrationClosed: 'New accounts cannot be created on this server.',
+  changePassword: 'Change password',
+  currentPassword: 'Current password',
+  newPassword: 'New password',
+  passwordChanged: 'Password changed. Other devices have been signed out.',
+  wrongPassword: 'The current password is not correct.',
+  exportData: 'Download my data',
+  exportHint:
+    'All your events, tasks, dates, reminders, memories and conversations as a JSON file.',
+  deleteAccount: 'Delete my account',
+  deleteAccountWarning:
+    'This permanently deletes your account and everything in it: events, tasks, dates, reminders, memories and conversations. It cannot be undone.',
+  confirmWithPassword: 'Enter your password to confirm',
+  rateLimited: 'Too many attempts. Please wait a few minutes and try again.',
   required: 'Required',
 };
 
@@ -353,6 +368,21 @@ const ta: Strings = {
   errorTaskBlocked: 'இது சார்ந்துள்ள பணியை முதலில் முடிக்கவும்.',
   errorGeneric: 'ஏதோ தவறு நடந்தது. மீண்டும் முயற்சிக்கவும்.',
   retry: 'மீண்டும் முயற்சி',
+  account: 'கணக்கு',
+  registrationClosed: 'இந்த சேவையகத்தில் புதிய கணக்குகளை உருவாக்க முடியாது.',
+  changePassword: 'கடவுச்சொல்லை மாற்று',
+  currentPassword: 'தற்போதைய கடவுச்சொல்',
+  newPassword: 'புதிய கடவுச்சொல்',
+  passwordChanged: 'கடவுச்சொல் மாற்றப்பட்டது. மற்ற சாதனங்கள் வெளியேற்றப்பட்டன.',
+  wrongPassword: 'தற்போதைய கடவுச்சொல் தவறு.',
+  exportData: 'என் தரவைப் பதிவிறக்கு',
+  exportHint:
+    'உங்கள் நிகழ்ச்சிகள், பணிகள், நாட்கள், நினைவூட்டல்கள், நினைவுகள், உரையாடல்கள் அனைத்தும் JSON கோப்பாக.',
+  deleteAccount: 'என் கணக்கை நீக்கு',
+  deleteAccountWarning:
+    'இது உங்கள் கணக்கையும் அதிலுள்ள அனைத்தையும் நிரந்தரமாக நீக்கும். இதைத் திரும்பப் பெற முடியாது.',
+  confirmWithPassword: 'உறுதிப்படுத்த உங்கள் கடவுச்சொல்லை உள்ளிடவும்',
+  rateLimited: 'அதிக முயற்சிகள். சில நிமிடங்கள் கழித்து மீண்டும் முயற்சிக்கவும்.',
   required: 'தேவை',
 };
 

@@ -4,20 +4,21 @@ A Tamil-first, bilingual (Tamil / English / Tanglish) voice-powered personal ass
 reminders, tasks and important dates. The product name is configurable (`APP_NAME`, and `name` in
 `apps/mobile/app.json`).
 
-Architecture and decisions: [docs/architecture.md](docs/architecture.md).
+Architecture and decisions: [docs/architecture.md](docs/architecture.md). Deploying and building:
+[docs/release.md](docs/release.md).
 
 ## Status
 
-| Phase                                                       | State                                           |
-| ----------------------------------------------------------- | ----------------------------------------------- |
-| 0. Discovery & architecture                                 | ✅ Done                                         |
-| 1. Foundation (monorepo, schema, /health, mobile ↔ API)     | ✅ Done                                         |
-| 2. Auth, events, tasks, important dates, conflicts          | ✅ Built — needs on-device testing              |
-| 3. Reminders (worker, local notifications, due/snooze)      | ✅ Built — needs on-device testing              |
-| 4. Assistant (Gemini tool-calling, confirmations, chat tab) | ✅ Built — needs a Gemini key to try            |
-| 5. Voice (speak to the assistant, replies read aloud)       | ✅ Built — Tamil speech needs on-device testing |
-| 6. Memory, day planning, morning brief                      | ✅ Built — needs on-device testing              |
-| 7. Hardening + release                                      | Not started                                     |
+| Phase                                                                 | State                                             |
+| --------------------------------------------------------------------- | ------------------------------------------------- |
+| 0. Discovery & architecture                                           | ✅ Done                                           |
+| 1. Foundation (monorepo, schema, /health, mobile ↔ API)               | ✅ Done                                           |
+| 2. Auth, events, tasks, important dates, conflicts                    | ✅ Built — needs on-device testing                |
+| 3. Reminders (worker, local notifications, due/snooze)                | ✅ Built — needs on-device testing                |
+| 4. Assistant (Gemini tool-calling, confirmations, chat tab)           | ✅ Built — needs a Gemini key to try              |
+| 5. Voice (speak to the assistant, replies read aloud)                 | ✅ Built — Tamil speech needs on-device testing   |
+| 6. Memory, day planning, morning brief                                | ✅ Built — needs on-device testing                |
+| 7. Hardening + release prep (limits, account export/delete, push, CI) | ✅ Built — see [docs/release.md](docs/release.md) |
 
 ## Repository layout
 

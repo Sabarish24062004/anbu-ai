@@ -4,14 +4,33 @@ import { randomBytes, scrypt, timingSafeEqual, type ScryptOptions } from 'node:c
 // so they can be raised later without invalidating existing passwords.
 const PARAMS = { N: 2 ** 17, r: 8, p: 1 };
 const KEY_LENGTH = 64;
+// Each derivation needs ~128 MB. Bounding concurrency keeps a burst of sign-in attempts from
+// exhausting memory; extra requests wait their turn.
+const MAX_CONCURRENT = 4;
+let active = 0;
+const waiting: (() => void)[] = [];
+
+async function withSlot<T>(fn: () => Promise<T>): Promise<T> {
+  if (active >= MAX_CONCURRENT) await new Promise<void>((resolve) => waiting.push(resolve));
+  active++;
+  try {
+    return await fn();
+  } finally {
+    active--;
+    waiting.shift()?.();
+  }
+}
 
 function derive(password: string, salt: Buffer, opts: { N: number; r: number; p: number }) {
   const options: ScryptOptions = { ...opts, maxmem: 256 * 1024 * 1024 };
-  return new Promise<Buffer>((resolve, reject) => {
-    scrypt(password.normalize('NFKC'), salt, KEY_LENGTH, options, (err, key) =>
-      err ? reject(err) : resolve(key),
-    );
-  });
+  return withSlot(
+    () =>
+      new Promise<Buffer>((resolve, reject) => {
+        scrypt(password.normalize('NFKC'), salt, KEY_LENGTH, options, (err, key) =>
+          err ? reject(err) : resolve(key),
+        );
+      }),
+  );
 }
 
 export async function hashPassword(password: string): Promise<string> {

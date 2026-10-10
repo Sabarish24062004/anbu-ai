@@ -4,6 +4,8 @@ import { createLogger } from './common/logger';
 import { loadEnv } from './config/env';
 import { createPrismaClient } from './database/prisma';
 import { createGeminiProvider, createGeminiTranscriber } from './modules/assistant/llm/gemini';
+import { inAppChannel } from './modules/reminders/dispatcher';
+import { createExpoPushChannel } from './modules/reminders/push';
 import { startReminderWorker } from './modules/reminders/worker';
 
 const env = loadEnv();
@@ -27,7 +29,17 @@ const server = app.listen(env.PORT, '0.0.0.0', () => {
 });
 
 const stopReminderWorker = env.REMINDER_WORKER_ENABLED
-  ? startReminderWorker({ prisma, logger, pollIntervalMs: env.REMINDER_POLL_SECONDS * 1000 })
+  ? startReminderWorker({
+      prisma,
+      logger,
+      pollIntervalMs: env.REMINDER_POLL_SECONDS * 1000,
+      channels: [
+        inAppChannel,
+        ...(env.PUSH_ENABLED
+          ? [createExpoPushChannel({ prisma, logger, accessToken: env.EXPO_ACCESS_TOKEN })]
+          : []),
+      ],
+    })
   : undefined;
 
 async function shutdown(signal: string) {

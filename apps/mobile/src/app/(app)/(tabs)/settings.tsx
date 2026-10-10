@@ -139,6 +139,7 @@ export default function SettingsScreen() {
             />
           )}
           <Button label={t.memories} variant="secondary" onPress={() => router.push('/memories')} />
+          <Button label={t.account} variant="secondary" onPress={() => router.push('/account')} />
           <View style={{ gap: 6 }}>
             <Text style={s.label}>{t.timezone}</Text>
             <Text style={s.body}>{me.data.user.timezone}</Text>

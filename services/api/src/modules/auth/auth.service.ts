@@ -22,7 +22,7 @@ const invalidRefresh = () =>
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
-async function issueTokens(
+export async function issueTokens(
   db: Db,
   ctx: AuthContext,
   userId: string,

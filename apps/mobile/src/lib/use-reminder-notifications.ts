@@ -1,6 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { addDays, startOfToday, toLocalDateString } from './datetime';
 import {
@@ -9,6 +9,7 @@ import {
   scheduleDailyBrief,
   scheduleReminders,
 } from './notifications';
+import { registerForPush } from './push';
 import { useDayPlan, useMe, useUpcomingReminders } from './queries';
 import { useSession, useT } from './session-context';
 
@@ -39,17 +40,22 @@ export function useReminderNotifications() {
   const briefAt = new Date(briefDay.getTime() + wake * 60_000);
   const briefPlan = useDayPlan(toLocalDateString(briefDay), briefOn);
 
+  // With remote push the server alerts this phone itself, so local copies would arrive twice.
+  const [pushActive, setPushActive] = useState(false);
   useEffect(() => {
     if (Platform.OS === 'web' || asked.current) return;
     asked.current = true;
-    void getPermission().then((state) => (state === 'undetermined' ? requestPermission() : state));
+    void getPermission()
+      .then((state) => (state === 'undetermined' ? requestPermission() : state))
+      .then((state) => (state === 'granted' ? registerForPush() : false))
+      .then(setPushActive);
   }, []);
 
   const briefAtMs = briefAt.getTime();
   useEffect(() => {
     if (!upcoming.data) return;
     const run = async () => {
-      await scheduleReminders(upcoming.data.reminders, t, language);
+      await scheduleReminders(pushActive ? [] : upcoming.data.reminders, t, language);
       if (briefOn && briefPlan.data) {
         await scheduleDailyBrief(new Date(briefAtMs), briefPlan.data.plan, t, language);
       }
@@ -57,7 +63,7 @@ export function useReminderNotifications() {
     run().catch(() => {
       // Without permission scheduling fails; reminders still appear in the app's "due now" list.
     });
-  }, [upcoming.data, briefOn, briefPlan.data, briefAtMs, t, language]);
+  }, [upcoming.data, pushActive, briefOn, briefPlan.data, briefAtMs, t, language]);
 
   // A tap that launched the app from a closed state.
   const last = Notifications.useLastNotificationResponse();

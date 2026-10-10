@@ -25,6 +25,7 @@ export default function AppLayout() {
       <Stack.Screen name="date/[id]" options={{ title: t.editDate }} />
       <Stack.Screen name="plan" options={{ title: t.plan }} />
       <Stack.Screen name="memories" options={{ title: t.memories }} />
+      <Stack.Screen name="account" options={{ title: t.account }} />
     </Stack>
   );
 }

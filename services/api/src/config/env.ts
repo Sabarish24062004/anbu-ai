@@ -34,6 +34,25 @@ const envSchema = z.object({
   GEMINI_MODEL: z.string().min(1).default('gemini-3.5-flash-lite'),
   // Model for voice transcription; defaults to GEMINI_MODEL.
   GEMINI_TRANSCRIBE_MODEL: z.string().min(1).optional(),
+  // Request rate limits (on by default; the test setup turns them off).
+  RATE_LIMITS_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  // Remote push through Expo (only phones running a development/store build register for it).
+  PUSH_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  // Needed only if "enhanced push security" is turned on for the project in the EAS dashboard.
+  EXPO_ACCESS_TOKEN: z.string().min(1).optional(),
+  // Number of reverse proxies in front of the API (0 when clients connect directly).
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
+  // Set to false after creating your own account to stop anyone else signing up.
+  REGISTRATION_OPEN: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 

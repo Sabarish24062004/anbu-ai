@@ -20,12 +20,15 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.3.0",
+    "express-rate-limit": "^8.7.0",
     "helmet": "^8.3.0",
     "jose": "^6.2.12",
     "luxon": "^3.7.2",
     "pg": "^8.23.1",
     "pino": "^10.4.0",
     "pino-http": "^11.0.0",
+    "prisma": "^7.10.0",
+    "tsx": "^4.23.15",
     "zod": "^4.6.5"
   },
   "devDependencies": {
@@ -36,9 +39,7 @@
     "@types/pg": "^8.23.1",
     "@types/supertest": "^7.2.1",
     "cross-env": "^7.0.3",
-    "prisma": "^7.10.0",
     "supertest": "^7.3.1",
-    "tsx": "^4.23.15",
     "typescript": "~6.0.3",
     "vitest": "^4.1.11"
   }

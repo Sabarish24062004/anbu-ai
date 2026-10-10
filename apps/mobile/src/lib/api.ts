@@ -18,6 +18,7 @@ import {
   type ImportantDateDto,
   type LoginInput,
   type MeResponse,
+  type RegisterDeviceInput,
   type RegisterInput,
   type ReminderDto,
   type TaskDto,
@@ -97,6 +98,18 @@ export const api = {
   login: (input: LoginInput) => publicPost<AuthResponse>('/auth/login', input),
 
   me: () => request<MeResponse>('/me'),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<AuthResponse>('/me/password', {
+      method: 'POST',
+      body: { currentPassword, newPassword },
+    }),
+  exportAccount: () => request<unknown>('/me/export', { timeoutMs: 60_000 }),
+  deleteAccount: (password: string) =>
+    request<void>('/me', { method: 'DELETE', body: { password } }),
+  registerDevice: (input: RegisterDeviceInput) =>
+    request<{ device: { id: string } }>('/devices', { method: 'POST', body: input }),
+  unregisterDevice: (pushToken: string) =>
+    request<void>('/devices/unregister', { method: 'POST', body: { pushToken } }),
   updateMe: (input: UpdateMeInput) => request<MeResponse>('/me', { method: 'PATCH', body: input }),
   updatePreferences: (input: UpdatePreferencesInput) =>
     request<MeResponse>('/me/preferences', { method: 'PATCH', body: input }),

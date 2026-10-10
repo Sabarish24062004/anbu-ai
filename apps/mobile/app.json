@@ -33,7 +33,8 @@
         {
           "microphonePermission": "Allow $(PRODUCT_NAME) to hear your voice commands."
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "scheme": "anbu",
     "experiments": {

@@ -22,6 +22,13 @@ export const loginSchema = z.strictObject({
 });
 export type LoginInput = z.input<typeof loginSchema>;
 
+export const changePasswordSchema = z.strictObject({
+  currentPassword: z.string().min(1).max(128),
+  newPassword: passwordSchema,
+});
+
+export const deleteAccountSchema = z.strictObject({ password: z.string().min(1).max(128) });
+
 export const refreshSchema = z.strictObject({ refreshToken: z.string().min(1).max(200) });
 
 export const updateMeSchema = z

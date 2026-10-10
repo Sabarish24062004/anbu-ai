@@ -22,6 +22,12 @@ export function errorMessage(err: unknown, t: Strings): string {
       return t.assistantBusy;
     case 'NO_SPEECH':
       return t.noSpeech;
+    case 'RATE_LIMITED':
+      return t.rateLimited;
+    case 'WRONG_PASSWORD':
+      return t.wrongPassword;
+    case 'REGISTRATION_CLOSED':
+      return t.registrationClosed;
     default:
       return t.errorGeneric;
   }
