@@ -16,6 +16,9 @@ export async function getActiveUser(prisma: PrismaClient, userId: string) {
   return user;
 }
 
+// Time of day for date-based reminders (birthdays, all-day events) when no preference exists.
+export const DEFAULT_NOTIFY_MINUTES_OF_DAY = 9 * 60;
+
 /** Defaults applied when a request omits them: the user's timezone and reminder lead time. */
 export async function getUserDefaults(prisma: PrismaClient, userId: string) {
   const user = await prisma.user.findUnique({
@@ -27,6 +30,8 @@ export async function getUserDefaults(prisma: PrismaClient, userId: string) {
     timezone: user.timezone,
     reminderLeadMinutes:
       user.preference?.defaultReminderLeadMinutes ?? DEFAULT_REMINDER_LEAD_MINUTES,
+    importantDateNotifyMinutes:
+      user.preference?.importantDateNotifyMinutes ?? DEFAULT_NOTIFY_MINUTES_OF_DAY,
   };
 }
 

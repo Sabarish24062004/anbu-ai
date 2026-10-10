@@ -23,6 +23,12 @@ const envSchema = z.object({
   JWT_ACCESS_SECRET: z.string().min(32, 'must be at least 32 characters'),
   ACCESS_TOKEN_TTL_MINUTES: z.coerce.number().int().min(1).max(60).default(15),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(365).default(30),
+  // The reminder worker runs inside the API process; tests drive it directly instead.
+  REMINDER_WORKER_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  REMINDER_POLL_SECONDS: z.coerce.number().int().min(5).max(600).default(30),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 

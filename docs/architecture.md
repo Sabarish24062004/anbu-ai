@@ -16,7 +16,7 @@
 | STT           | expo-speech-recognition (adapter)                                            | Requires a development build (EAS); text fallback always available                                                |
 | API           | Node 24 + Express 5 + TypeScript                                             | Modules: auth, users, preferences, events, tasks, important-dates, reminders, scheduling, assistant, ai-providers |
 | DB            | PostgreSQL 18 (local service) + Prisma                                       | UUID ids, UTC timestamps + user IANA timezone, recurrence stored as local-time rules                              |
-| Jobs          | pg-boss                                                                      | Durable jobs stored in Postgres; no Redis                                                                         |
+| Jobs          | In-process reminder worker over the `Reminder` table                         | `FOR UPDATE SKIP LOCKED` claims; no Redis, no pg-boss (see Phase 3 decisions)                                     |
 | Dates         | luxon                                                                        | Timezone/DST-correct trigger calculation                                                                          |
 | LLM           | Adapter interface; default = free hosted tier (e.g. Gemini); Ollama optional | Dev PC (7.7 GB RAM, 2 GB GPU) is too small for a good local Tamil model                                           |
 
@@ -28,10 +28,12 @@ user text/transcript → language layer (detect script, normalise Tanglish, dete
 
 ## Reminder flow
 
-create/update event → transaction (event + reminders) → trigger = local start − lead, converted to UTC
-→ pg-boss job keyed by reminder id (idempotent) → worker marks processing → delivery attempt logged
-→ status sent/failed. Event cancel/reschedule cancels and re-registers jobs. App mirrors upcoming
-reminders as local notifications. Delivery is best-effort and reported honestly in the UI.
+create/update/cancel an event, task or important date → one transaction writes the item and
+reconciles its reminder rows for the next 7 days (keyed by occurrence + offset) → the worker claims
+due rows (`PENDING → PROCESSING`, `FOR UPDATE SKIP LOCKED`), delivers, logs a delivery attempt and
+marks them `SENT` (or retries, then `FAILED`) → the app lists them under "Due now". Separately, the
+app schedules the next 72 hours of `PENDING` reminders as local notifications, which is what alerts
+the user while the app is closed.
 
 ## Decisions (2026-10-10)
 
@@ -78,15 +80,49 @@ body replays the stored response (`Idempotent-Replayed: true`), a different body
 - **Auth.** scrypt password hashes (OWASP parameters, stored per hash). Refresh tokens are single-use
   and rotated; replaying a used one revokes that sign-in's whole token family. Clients must not
   refresh concurrently. Login responses do not reveal whether an email exists.
-- **Not yet:** rate limiting on `/auth` (Phase 7), cleanup of expired idempotency keys and refresh
+- **Not yet (Phase 2):** rate limiting on `/auth` (Phase 7), cleanup of expired idempotency keys and refresh
   tokens (Phase 3 jobs), reminder rows (Phase 3).
+
+## Reminders (Phase 3)
+
+| Route                             | Notes                                                       |
+| --------------------------------- | ----------------------------------------------------------- |
+| `GET /reminders/upcoming?hours`   | `PENDING` reminders to schedule on the phone (default 72 h) |
+| `GET /reminders/due`              | Fired in the last 24 h and not yet acknowledged             |
+| `POST /reminders/:id/acknowledge` | `{ action: "COMPLETED" \| "DISMISSED" }`                    |
+| `POST /reminders/:id/snooze`      | `{ minutes }`; only after the reminder has fired            |
+
+### Phase 3 decisions
+
+- **No pg-boss.** The `Reminder` table is already the durable queue. A second job store would have
+  to be kept in sync on every edit, cancel and snooze. The worker runs inside the API process
+  (`REMINDER_WORKER_ENABLED`, `REMINDER_POLL_SECONDS`, default 30 s) and is safe to run in several
+  processes at once.
+- **Rolling 7-day horizon.** Rows are created for triggers within 7 days; an hourly pass (and one at
+  startup) extends it, so recurring items never need unbounded rows.
+- **Exactly once.** Rows are unique per (item, occurrence, offset); state changes are conditional, so a
+  reminder is delivered once even with overlapping workers. Re-planning never resurrects a sent
+  reminder and never undoes a snooze.
+- **Restart recovery.** Rows stuck in `PROCESSING` for 5 minutes return to `PENDING`. A reminder whose
+  occurrence started more than 10 minutes ago is marked `FAILED` with `MISSED` rather than sent late.
+- **Too-late reminders.** If an item is created after its reminder time (e.g. an event in 5 minutes
+  with a 15-minute lead), one reminder fires immediately.
+- **Date-only items** (birthdays, all-day events) remind at the user's `importantDateNotifyMinutes`
+  (default 09:00) in the item's timezone; changing that preference re-plans them.
+- **Delivery channels.** `IN_APP` (the "Due now" list) on the server, plus local notifications
+  scheduled by the app (work in Expo Go). Remote push needs a development build and slots in as
+  another `ReminderChannel` later. The iOS limit of 64 pending notifications is respected (60).
+- **UTC sessions.** The Prisma pg adapter sends timestamps without an offset, so a non-UTC Postgres
+  session time zone stored every instant shifted (here by −5:30) while Prisma round-trips still
+  looked right. Every connection now runs with `TimeZone=UTC`; a regression test checks the stored
+  value and `now()` agree.
 
 ## Milestone plan
 
 0. Discovery ✅
 1. Foundation: monorepo, lint/format, Prisma schema + migration, env, /health, mobile ↔ API check
 2. Auth + events/tasks/important dates + conflicts + timezone tests
-3. Reminders (pg-boss, restart recovery, dedupe, local notifications)
+3. Reminders (worker, restart recovery, dedupe, local notifications) ✅
 4. Assistant tool-calling
 5. Tamil/English voice
 6. Memory + daily planning

@@ -4,5 +4,6 @@ export * from './events';
 export * from './health';
 export * from './important-dates';
 export * from './recurrence';
+export * from './reminders';
 export * from './tasks';
 export * from './validation';

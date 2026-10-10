@@ -18,3 +18,9 @@ export function toZonedIso(date: Date, zone: string): string {
 }
 
 export const toIsoOrNull = (date: Date | null) => date?.toISOString() ?? null;
+
+/** The date in `year`; Feb 29 is observed on Feb 28 in common years. */
+export function observedDate(year: number, month: number, day: number, zone: string): DateTime {
+  const exact = DateTime.fromObject({ year, month, day }, { zone });
+  return exact.isValid ? exact : DateTime.fromObject({ year, month, day: day - 1 }, { zone });
+}

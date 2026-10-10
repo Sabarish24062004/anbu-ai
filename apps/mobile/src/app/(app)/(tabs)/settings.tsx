@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Linking, Platform, Text, View } from 'react-native';
 import {
   REMINDER_LEAD_OPTIONS_MINUTES,
   isValidTimezone,
@@ -22,6 +23,7 @@ import { getApiBaseUrl } from '@/lib/config';
 import { deviceTimezone } from '@/lib/datetime';
 import { errorMessage } from '@/lib/errors';
 import { ApiError } from '@/lib/http';
+import { getPermission, requestPermission, type PermissionState } from '@/lib/notifications';
 import { keys, useMe } from '@/lib/queries';
 import { sessionStore } from '@/lib/session';
 import { useSession, useT } from '@/lib/session-context';
@@ -108,6 +110,7 @@ export default function SettingsScreen() {
         </>
       )}
 
+      <NotificationStatus />
       <ServerStatus />
       <Button label={t.signOut} variant="danger" onPress={() => void signOut()} />
     </Screen>
@@ -127,6 +130,44 @@ function NameField({ saved, onSave }: { saved: string; onSave: (name: string | n
         if (trimmed !== saved) onSave(trimmed || null);
       }}
     />
+  );
+}
+
+function NotificationStatus() {
+  const s = useStyles();
+  const t = useT();
+  const colors = useColors();
+  const [state, setState] = useState<PermissionState | null>(null);
+
+  // Re-check when the screen regains focus: the user may have changed it in phone settings.
+  useFocusEffect(
+    useCallback(() => {
+      void getPermission().then(setState);
+    }, []),
+  );
+
+  if (Platform.OS === 'web' || state === null) return null;
+  const on = state === 'granted';
+  return (
+    <Card>
+      <Text style={s.title}>{t.notifications}</Text>
+      <Text style={{ color: on ? colors.success : colors.warning, fontSize: 15, lineHeight: 21 }}>
+        {on ? t.notificationsOn : t.notificationsOff}
+      </Text>
+      {!on && (
+        <View style={{ marginTop: 8 }}>
+          <Button
+            label={state === 'denied' ? t.openSettings : t.enableNotifications}
+            variant="secondary"
+            onPress={() =>
+              state === 'denied'
+                ? void Linking.openSettings()
+                : void requestPermission().then(setState)
+            }
+          />
+        </View>
+      )}
+    </Card>
   );
 }
 

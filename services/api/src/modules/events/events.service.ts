@@ -19,6 +19,7 @@ import type { EventStatus } from '../../generated/prisma/client';
 import { getUserDefaults } from '../users/users.service';
 import { findConflicts, scheduleOf, type Schedule } from './conflicts';
 import { toEventDto } from './events.mapper';
+import { planContext, syncEventReminders } from '../reminders/sync';
 
 type CreateEvent = z.output<typeof createEventSchema>;
 type UpdateEvent = z.output<typeof updateEventSchema>;
@@ -116,6 +117,8 @@ export async function createEvent(
       );
   assertNoUnconfirmedConflicts(conflicts, input.allowConflicts);
 
+  // Reminder rows change in the same transaction as the item, so they never disagree.
+  const ctx = await planContext(prisma, userId);
   const event = await prisma.$transaction(async (tx) => {
     const created = await tx.event.create({
       data: {
@@ -145,6 +148,7 @@ export async function createEvent(
       entityId: created.id,
       metadata: { conflictsAccepted: conflicts.length },
     });
+    await syncEventReminders(tx, created, ctx);
     return created;
   });
   return { event: toEventDto(event), conflicts };
@@ -190,6 +194,8 @@ export async function updateEvent(
       : [];
   assertNoUnconfirmedConflicts(conflicts, allowConflicts);
 
+  // Reminder rows change in the same transaction as the item, so they never disagree.
+  const ctx = await planContext(prisma, userId);
   const event = await prisma.$transaction(async (tx) => {
     const updated = await tx.event.update({
       where: { id },
@@ -209,6 +215,7 @@ export async function updateEvent(
       entityId: id,
       metadata: { fields: Object.keys(changes), conflictsAccepted: conflicts.length },
     });
+    await syncEventReminders(tx, updated, ctx);
     return updated;
   });
   return { event: toEventDto(event), conflicts };
@@ -287,6 +294,8 @@ async function transition(
     );
   }
   const now = new Date();
+  // Reminder rows change in the same transaction as the item, so they never disagree.
+  const ctx = await planContext(prisma, userId);
   const event = await prisma.$transaction(async (tx) => {
     const updated = await tx.event.update({
       where: { id },
@@ -297,6 +306,7 @@ async function transition(
     });
     const action = target === 'COMPLETED' ? 'event.complete' : 'event.cancel';
     await audit(tx, { userId, action, entityType: 'Event', entityId: id });
+    await syncEventReminders(tx, updated, ctx);
     return updated;
   });
   return toEventDto(event);

@@ -13,6 +13,7 @@ import {
   type LoginInput,
   type MeResponse,
   type RegisterInput,
+  type ReminderDto,
   type TaskDto,
   type UpcomingImportantDateDto,
   type UpdateEventInput,
@@ -138,4 +139,18 @@ export const api = {
     }),
   deleteImportantDate: (id: string) =>
     request<void>(`/important-dates/${id}`, { method: 'DELETE' }),
+
+  upcomingReminders: (hours: number) =>
+    request<{ reminders: ReminderDto[] }>('/reminders/upcoming', { query: { hours } }),
+  dueReminders: () => request<{ reminders: ReminderDto[] }>('/reminders/due'),
+  acknowledgeReminder: (id: string, action: 'COMPLETED' | 'DISMISSED') =>
+    request<{ reminder: ReminderDto }>(`/reminders/${id}/acknowledge`, {
+      method: 'POST',
+      body: { action },
+    }),
+  snoozeReminder: (id: string, minutes: number) =>
+    request<{ reminder: ReminderDto }>(`/reminders/${id}/snooze`, {
+      method: 'POST',
+      body: { minutes },
+    }),
 };

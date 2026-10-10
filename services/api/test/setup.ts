@@ -7,3 +7,4 @@ if (!process.env['DATABASE_URL_TEST']) {
 }
 process.env['DATABASE_URL'] = process.env['DATABASE_URL_TEST'];
 process.env['LOG_LEVEL'] = 'silent';
+process.env['REMINDER_WORKER_ENABLED'] = 'false';

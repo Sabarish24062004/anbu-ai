@@ -13,7 +13,8 @@ Architecture and decisions: [docs/architecture.md](docs/architecture.md).
 | 0. Discovery & architecture                             | ✅ Done                            |
 | 1. Foundation (monorepo, schema, /health, mobile ↔ API) | ✅ Done                            |
 | 2. Auth, events, tasks, important dates, conflicts      | ✅ Built — needs on-device testing |
-| 3–7. Reminders, assistant, voice, memory, release       | Not started                        |
+| 3. Reminders (worker, local notifications, due/snooze)  | ✅ Built — needs on-device testing |
+| 4–7. Assistant, voice, memory, release                  | Not started                        |
 
 ## Repository layout
 
@@ -52,7 +53,9 @@ npm run dev:mobile    # Expo dev server; scan the QR code with Expo Go
 
 In the app: create an account, then use the Agenda, Tasks, Dates and Settings tabs. The UI is in
 Tamil by default; switch to English on the sign-in screen or in Settings. Sessions are kept in the
-device's secure storage.
+device's secure storage. Allow notifications when asked: reminders for the next 72 hours are
+scheduled on the phone, and fired reminders also appear under "Due now" on the Agenda. The API runs
+the reminder worker itself, so keep `npm run dev:api` running.
 
 The app finds the API automatically at the dev computer's LAN IP on port 4000. To use a different
 API, set `EXPO_PUBLIC_API_URL` before starting Expo. On Windows, allow Node.js through the firewall

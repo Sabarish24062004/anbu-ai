@@ -13,6 +13,7 @@ import type { TokenConfig } from './modules/auth/tokens';
 import { eventsRouter } from './modules/events/events.routes';
 import { healthRouter } from './modules/health/health.routes';
 import { importantDatesRouter } from './modules/important-dates/important-dates.routes';
+import { remindersRouter } from './modules/reminders/reminders.routes';
 import { tasksRouter } from './modules/tasks/tasks.routes';
 import { usersRouter } from './modules/users/users.routes';
 import pkg from '../package.json' with { type: 'json' };
@@ -59,6 +60,7 @@ export function createApp({ env, prisma, logger }: AppDeps) {
   app.use('/events', authed, eventsRouter(prisma));
   app.use('/tasks', authed, tasksRouter(prisma));
   app.use('/important-dates', authed, importantDatesRouter(prisma));
+  app.use('/reminders', authed, remindersRouter(prisma));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

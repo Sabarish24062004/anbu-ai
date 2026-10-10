@@ -13,7 +13,12 @@ export const keys = {
   task: (id: string) => ['tasks', 'detail', id] as const,
   dates: ['important-dates'] as const,
   date: (id: string) => ['important-dates', 'detail', id] as const,
+  reminders: ['reminders'] as const,
 };
+
+// How far ahead the phone schedules local notifications. iOS keeps at most 64 pending.
+export const NOTIFICATION_WINDOW_HOURS = 72;
+const REMINDER_REFRESH_MS = 15 * 60_000;
 
 export function useMe() {
   return useQuery({
@@ -59,9 +64,26 @@ export function useImportantDate(id: string) {
   return useQuery({ queryKey: keys.date(id), queryFn: () => api.importantDate(id) });
 }
 
+export function useUpcomingReminders() {
+  return useQuery({
+    queryKey: [...keys.reminders, 'upcoming'],
+    queryFn: () => api.upcomingReminders(NOTIFICATION_WINDOW_HOURS),
+    refetchInterval: REMINDER_REFRESH_MS,
+  });
+}
+
+export function useDueReminders() {
+  return useQuery({
+    queryKey: [...keys.reminders, 'due'],
+    queryFn: api.dueReminders,
+    refetchInterval: 60_000,
+  });
+}
+
 /**
- * A mutation that refreshes the listed caches when it succeeds. `beforeInvalidate` runs first;
- * deletes use it to leave the detail screen before its now-missing record is refetched.
+ * A mutation that refreshes the listed caches, and reminders (any change can move them), when it
+ * succeeds. `beforeInvalidate` runs first; deletes use it to leave the detail screen before its
+ * now-missing record is refetched.
  */
 export function useInvalidatingMutation<TVars, TResult>(
   fn: (vars: TVars) => Promise<TResult>,
@@ -73,7 +95,11 @@ export function useInvalidatingMutation<TVars, TResult>(
     mutationFn: fn,
     onSuccess: (result) => {
       beforeInvalidate?.(result);
-      return Promise.all(invalidate.map((queryKey) => queryClient.invalidateQueries({ queryKey })));
+      return Promise.all(
+        [...invalidate, keys.reminders].map((queryKey) =>
+          queryClient.invalidateQueries({ queryKey }),
+        ),
+      );
     },
   });
 }

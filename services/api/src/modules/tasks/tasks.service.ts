@@ -17,6 +17,7 @@ import { invalidField } from '../../common/validate';
 import type { PrismaClient } from '../../database/prisma';
 import type { Task } from '../../generated/prisma/client';
 import { getUserDefaults } from '../users/users.service';
+import { planContext, syncTaskReminders } from '../reminders/sync';
 
 type CreateTask = z.output<typeof createTaskSchema>;
 type UpdateTask = z.output<typeof updateTaskSchema>;
@@ -83,6 +84,8 @@ export async function createTask(
   const dueAt = input.dueAt ? parseDateTimeInput(input.dueAt, timezone, 'dueAt') : null;
   if (input.blockedById) await assertValidBlocker(prisma, userId, input.blockedById);
 
+  // Reminder rows change in the same transaction as the item, so they never disagree.
+  const ctx = await planContext(prisma, userId);
   const task = await prisma.$transaction(async (tx) => {
     const created = await tx.task.create({
       data: {
@@ -101,6 +104,7 @@ export async function createTask(
       },
     });
     await audit(tx, { userId, action: 'task.create', entityType: 'Task', entityId: created.id });
+    await syncTaskReminders(tx, created, ctx);
     return created;
   });
   return toTaskDto(task);
@@ -125,6 +129,8 @@ export async function updateTask(
   if (rrule && !dueAt) throw invalidField('rrule', 'a recurring task needs dueAt');
   if (input.blockedById) await assertValidBlocker(prisma, userId, input.blockedById, id);
 
+  // Reminder rows change in the same transaction as the item, so they never disagree.
+  const ctx = await planContext(prisma, userId);
   const task = await prisma.$transaction(async (tx) => {
     const updated = await tx.task.update({ where: { id }, data: { ...input, dueAt, rrule } });
     await audit(tx, {
@@ -134,6 +140,7 @@ export async function updateTask(
       entityId: id,
       metadata: { fields: Object.keys(input) },
     });
+    await syncTaskReminders(tx, updated, ctx);
     return updated;
   });
   return toTaskDto(task);
@@ -173,6 +180,8 @@ export async function completeTask(
     }
   }
 
+  // Reminder rows change in the same transaction as the item, so they never disagree.
+  const ctx = await planContext(prisma, userId);
   const task = await prisma.$transaction(async (tx) => {
     const updated = await tx.task.update({
       where: { id },
@@ -186,6 +195,7 @@ export async function completeTask(
       entityType: 'Task',
       entityId: id,
     });
+    await syncTaskReminders(tx, updated, ctx);
     return updated;
   });
   return { task: toTaskDto(task), rescheduled: next !== null };

@@ -1,10 +1,12 @@
 import { Stack } from 'expo-router';
 import { useT } from '@/lib/session-context';
+import { useReminderNotifications } from '@/lib/use-reminder-notifications';
 import { useColors } from '@/theme/colors';
 
 export default function AppLayout() {
   const t = useT();
   const colors = useColors();
+  useReminderNotifications();
   return (
     <Stack
       screenOptions={{

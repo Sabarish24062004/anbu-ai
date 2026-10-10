@@ -9,10 +9,12 @@ import {
 } from '@anbu/shared';
 import { audit } from '../../common/audit';
 import { notFound } from '../../common/errors';
+import { observedDate } from '../../common/time';
 import { invalidField } from '../../common/validate';
 import type { PrismaClient } from '../../database/prisma';
 import type { ImportantDate } from '../../generated/prisma/client';
 import { getUserDefaults } from '../users/users.service';
+import { planContext, syncImportantDateReminders } from '../reminders/sync';
 
 type CreateImportantDate = z.output<typeof createImportantDateSchema>;
 type UpdateImportantDate = z.output<typeof updateImportantDateSchema>;
@@ -42,12 +44,6 @@ export function toImportantDateDto(d: ImportantDate): ImportantDateDto {
 
 type DateParts = Pick<ImportantDate, 'month' | 'day' | 'year' | 'recursAnnually' | 'timezone'>;
 
-/** The date in `year`; Feb 29 is observed on Feb 28 in common years. */
-function observedDate(year: number, month: number, day: number, zone: string): DateTime {
-  const exact = DateTime.fromObject({ year, month, day }, { zone });
-  return exact.isValid ? exact : DateTime.fromObject({ year, month, day: day - 1 }, { zone });
-}
-
 /** The next occurrence on or after today (in the date's own timezone), or null if it has passed. */
 export function nextOccurrence(d: DateParts, now: DateTime) {
   const today = now.setZone(d.timezone).startOf('day');
@@ -76,6 +72,8 @@ export async function createImportantDate(
   input: CreateImportantDate,
 ): Promise<ImportantDateDto> {
   const { timezone } = await getUserDefaults(prisma, userId);
+  // Reminder rows change in the same transaction as the item, so they never disagree.
+  const ctx = await planContext(prisma, userId);
   const row = await prisma.$transaction(async (tx) => {
     const created = await tx.importantDate.create({
       data: { ...input, userId, timezone: input.timezone ?? timezone },
@@ -86,6 +84,7 @@ export async function createImportantDate(
       entityType: 'ImportantDate',
       entityId: created.id,
     });
+    await syncImportantDateReminders(tx, created, ctx);
     return created;
   });
   return toImportantDateDto(row);
@@ -106,6 +105,8 @@ export async function updateImportantDate(
   if (!merged.recursAnnually && merged.year == null) {
     throw invalidField('year', 'a one-off date needs a year');
   }
+  // Reminder rows change in the same transaction as the item, so they never disagree.
+  const ctx = await planContext(prisma, userId);
   const row = await prisma.$transaction(async (tx) => {
     const updated = await tx.importantDate.update({ where: { id }, data: input });
     await audit(tx, {
@@ -115,6 +116,7 @@ export async function updateImportantDate(
       entityId: id,
       metadata: { fields: Object.keys(input) },
     });
+    await syncImportantDateReminders(tx, updated, ctx);
     return updated;
   });
   return toImportantDateDto(row);

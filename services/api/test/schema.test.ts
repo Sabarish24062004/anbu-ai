@@ -70,4 +70,19 @@ describe('database integrity constraints', () => {
       }),
     ).rejects.toThrow(/Unique constraint/i);
   });
+
+  it('stores instants in UTC regardless of the server time zone', async () => {
+    // Regression: the pg adapter sends timestamps without an offset; a non-UTC session time zone
+    // shifted every stored instant while Prisma round-trips still looked correct.
+    const instant = new Date('2027-01-04T01:30:00.000Z');
+    const event = await prisma.event.create({
+      data: { userId, title: 'UTC check', timezone: 'Asia/Kolkata', startAt: instant },
+    });
+    const [row] = await prisma.$queryRaw<{ utc: string; age: number }[]>`
+      SELECT to_char("startAt" AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI') AS utc,
+             abs(extract(epoch from (now() - "createdAt")))::int AS age
+      FROM "Event" WHERE id = ${event.id}::uuid`;
+    expect(row?.utc).toBe('2027-01-04T01:30');
+    expect(row?.age).toBeLessThan(60);
+  });
 });

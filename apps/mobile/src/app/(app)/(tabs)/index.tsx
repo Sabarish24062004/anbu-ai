@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { Text, View } from 'react-native';
 import type { EventOccurrenceDto } from '@anbu/shared';
+import { DueReminders } from '@/components/DueReminders';
 import { Button, Card, EmptyState, ErrorBanner, Loading, Screen, useStyles } from '@/components/ui';
 import {
   addDays,
@@ -47,6 +48,7 @@ export default function AgendaScreen() {
         </Text>
       ) : null}
       <Button label={t.addEvent} onPress={() => router.push('/event/new')} />
+      <DueReminders />
 
       {dates.data?.upcoming.length ? (
         <>
