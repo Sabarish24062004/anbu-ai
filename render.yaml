@@ -2,8 +2,8 @@
 # The database is Supabase's free Postgres; see docs/hosting.md for the full setup.
 #
 # If Render cannot give a service the name below (names are global), it adds a suffix to the
-# URL. Then update EXPO_PUBLIC_API_URL (web app), CORS_ORIGINS (API) and the keep-alive URL in
-# .github/workflows/keep-alive.yml to the real addresses.
+# URL. Then update EXPO_PUBLIC_API_URL (web app), CORS_ORIGINS (API) and the API_URL repository
+# variable read by .github/workflows/keep-alive.yml to the real addresses.
 services:
   - type: web
     name: anbu-ai-api

@@ -5,7 +5,7 @@ reminders, tasks and important dates. The product name is configurable (`APP_NAM
 `apps/mobile/app.json`).
 
 Architecture and decisions: [docs/architecture.md](docs/architecture.md). Deploying and building:
-[docs/release.md](docs/release.md).
+[docs/release.md](docs/release.md). Free hosting (web + Android): [docs/hosting.md](docs/hosting.md).
 
 ## Screenshots
 

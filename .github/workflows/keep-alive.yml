@@ -3,6 +3,8 @@
 # fits in Render's 750 free hours) and keeps the Supabase project active.
 # GitHub runs schedules on a best-effort basis and pauses them after 60 days without commits;
 # re-enable from the Actions tab if that happens.
+# The API address comes from the repository variable API_URL (Settings > Secrets and variables >
+# Actions > Variables); until it is set the job does nothing.
 name: Keep API awake
 
 on:
@@ -14,8 +16,9 @@ permissions: {}
 
 jobs:
   ping:
+    if: vars.API_URL != ''
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
       - name: Ping /health
-        run: curl --fail --silent --show-error --max-time 120 --retry 2 https://anbu-ai-api.onrender.com/health
+        run: curl --fail --silent --show-error --max-time 120 --retry 2 "${{ vars.API_URL }}/health"
