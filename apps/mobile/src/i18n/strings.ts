@@ -169,6 +169,10 @@ const en = {
   readAloud: 'Read aloud',
   noTamilVoice:
     'This phone has no Tamil voice, so Tamil replies are shown but not read aloud. You can add one in the phone’s text-to-speech settings.',
+  noTamilVoiceWeb:
+    'This browser has no Tamil voice, so Tamil replies are shown but not read aloud.',
+  micDeniedWeb:
+    'Microphone access is blocked. Allow it from the icon in the address bar to talk to the assistant.',
   // Reminders
   dueNow: 'Due now',
   notifDone: 'Done',
@@ -375,6 +379,9 @@ const ta: Strings = {
   readAloud: 'வாசி',
   noTamilVoice:
     'இந்த தொலைபேசியில் தமிழ் குரல் இல்லை; தமிழ் பதில்கள் காட்டப்படும், வாசிக்கப்படாது. தொலைபேசியின் உரை-பேச்சு அமைப்புகளில் சேர்க்கலாம்.',
+  noTamilVoiceWeb: 'இந்த உலாவியில் தமிழ் குரல் இல்லை; தமிழ் பதில்கள் காட்டப்படும், வாசிக்கப்படாது.',
+  micDeniedWeb:
+    'மைக்ரோஃபோன் அனுமதி தடுக்கப்பட்டுள்ளது. உதவியாளரிடம் பேச முகவரிப் பட்டியில் உள்ள குறியீட்டில் அனுமதிக்கவும்.',
   dueNow: 'இப்போது',
   notifDone: 'முடிந்தது',
   gotIt: 'சரி',

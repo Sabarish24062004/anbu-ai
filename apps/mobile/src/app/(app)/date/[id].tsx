@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import type { CreateImportantDateInput } from '@anbu/shared';
 import { ImportantDateForm } from '@/components/forms/ImportantDateForm';
 import { Button, ErrorBanner, Loading, Screen } from '@/components/ui';
@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { confirm, errorMessage } from '@/lib/errors';
 import { keys, useImportantDate, useInvalidatingMutation } from '@/lib/queries';
 import { useT } from '@/lib/session-context';
+import { goBack } from '@/lib/navigation';
 
 export default function EditImportantDateScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -19,7 +20,7 @@ export default function EditImportantDateScreen() {
   const remove = useInvalidatingMutation(
     () => api.deleteImportantDate(id),
     [keys.dates],
-    () => router.back(),
+    () => goBack('/dates'),
   );
 
   if (query.isPending)
@@ -40,7 +41,7 @@ export default function EditImportantDateScreen() {
       <ImportantDateForm
         initial={query.data.importantDate}
         submit={(input, key) => update.mutateAsync({ input, key })}
-        onSaved={() => router.back()}
+        onSaved={() => goBack('/dates')}
       />
       {remove.isError && <ErrorBanner message={errorMessage(remove.error, t)} />}
       <Button

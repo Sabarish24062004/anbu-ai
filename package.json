@@ -13,6 +13,7 @@
   "scripts": {
     "dev:api": "npm run dev -w @anbu/api",
     "dev:mobile": "npm run start -w @anbu/mobile",
+    "dev:web": "npm run web -w @anbu/mobile",
     "db:migrate": "npm run db:migrate -w @anbu/api",
     "test": "npm run test -w @anbu/api && npm run test -w @anbu/mobile",
     "typecheck": "npm run typecheck --workspaces --if-present",

@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import type { CreateTaskInput } from '@anbu/shared';
 import { TaskForm } from '@/components/forms/TaskForm';
 import { Button, ErrorBanner, Loading, Screen } from '@/components/ui';
@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { confirm, errorMessage } from '@/lib/errors';
 import { keys, useInvalidatingMutation, useTask } from '@/lib/queries';
 import { useT } from '@/lib/session-context';
+import { goBack } from '@/lib/navigation';
 
 export default function EditTaskScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -18,7 +19,7 @@ export default function EditTaskScreen() {
   const remove = useInvalidatingMutation(
     () => api.deleteTask(id),
     [keys.tasks],
-    () => router.back(),
+    () => goBack('/tasks'),
   );
 
   if (task.isPending)
@@ -39,7 +40,7 @@ export default function EditTaskScreen() {
       <TaskForm
         initial={task.data.task}
         submit={(input, key) => update.mutateAsync({ input, key })}
-        onSaved={() => router.back()}
+        onSaved={() => goBack('/tasks')}
       />
       {remove.isError && <ErrorBanner message={errorMessage(remove.error, t)} />}
       <Button

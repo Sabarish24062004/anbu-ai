@@ -195,7 +195,9 @@ export default function AssistantScreen() {
             <Text style={s.meta}>{t.thinking}</Text>
           </View>
         )}
-        {recorder.permission === 'denied' && <ErrorBanner message={t.micDenied} />}
+        {recorder.permission === 'denied' && (
+          <ErrorBanner message={Platform.OS === 'web' ? t.micDeniedWeb : t.micDenied} />
+        )}
         {(send.error ?? decide.error) && (
           <ErrorBanner message={errorMessage(send.error ?? decide.error, t)} />
         )}

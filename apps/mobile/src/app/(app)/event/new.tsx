@@ -1,8 +1,8 @@
-import { router } from 'expo-router';
 import { EventForm } from '@/components/forms/EventForm';
 import { Screen } from '@/components/ui';
 import { api } from '@/lib/api';
 import { keys, useInvalidatingMutation } from '@/lib/queries';
+import { goBack } from '@/lib/navigation';
 
 export default function NewEventScreen() {
   const create = useInvalidatingMutation(
@@ -14,7 +14,7 @@ export default function NewEventScreen() {
     <Screen>
       <EventForm
         submit={(input, key) => create.mutateAsync({ input, key })}
-        onSaved={() => router.back()}
+        onSaved={() => goBack('/')}
       />
     </Screen>
   );

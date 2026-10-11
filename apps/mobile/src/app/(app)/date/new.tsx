@@ -1,9 +1,9 @@
-import { router } from 'expo-router';
 import type { CreateImportantDateInput } from '@anbu/shared';
 import { ImportantDateForm } from '@/components/forms/ImportantDateForm';
 import { Screen } from '@/components/ui';
 import { api } from '@/lib/api';
 import { keys, useInvalidatingMutation } from '@/lib/queries';
+import { goBack } from '@/lib/navigation';
 
 export default function NewImportantDateScreen() {
   const create = useInvalidatingMutation(
@@ -15,7 +15,7 @@ export default function NewImportantDateScreen() {
     <Screen>
       <ImportantDateForm
         submit={(input, key) => create.mutateAsync({ input, key })}
-        onSaved={() => router.back()}
+        onSaved={() => goBack('/dates')}
       />
     </Screen>
   );

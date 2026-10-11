@@ -1,6 +1,6 @@
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
-import { useState } from 'react';
-import { Platform, Pressable, Text, TextInput, View } from 'react-native';
+import { createElement } from 'react';
+import { Platform, Pressable, Text, useColorScheme, View } from 'react-native';
 import type { Language } from '@anbu/shared';
 import { localeFor, toLocalDateString, toLocalDateTimeString } from '@/lib/datetime';
 import { useColors } from '@/theme/colors';
@@ -25,7 +25,7 @@ function formatLocal(d: Date, mode: Mode, lang: Language) {
 
 /**
  * Date or date-time picker. Android uses the system dialogs (date, then time), iOS the compact
- * inline picker, and Expo web a plain text field ("YYYY-MM-DD" or "YYYY-MM-DDTHH:mm").
+ * inline picker, and the web the browser's date/time input.
  */
 export function DateTimeField({
   label,
@@ -104,6 +104,7 @@ export function DateTimeField({
   return <WebDateTimeInput {...{ label, value, onChange, mode, error }} />;
 }
 
+/** The browser's own date/time picker: an HTML <input> (react-native-web renders to the DOM). */
 function WebDateTimeInput({
   label,
   value,
@@ -117,36 +118,47 @@ function WebDateTimeInput({
   mode: Mode;
   error?: string;
 }) {
-  const s = useStyles();
-  const format =
+  const colors = useColors();
+  const scheme = useColorScheme();
+  const text =
     mode === 'date'
-      ? toLocalDateString
+      ? toLocalDateString(value)
       : mode === 'time'
-        ? (d: Date) => toLocalDateTimeString(d).slice(11)
-        : toLocalDateTimeString;
-  const [text, setText] = useState(format(value));
+        ? toLocalDateTimeString(value).slice(11)
+        : toLocalDateTimeString(value);
   return (
     <Field label={label} error={error}>
-      <TextInput
-        value={text}
-        onChangeText={setText}
-        onBlur={() => {
+      {createElement('input', {
+        type: mode === 'date' ? 'date' : mode === 'time' ? 'time' : 'datetime-local',
+        value: text,
+        'aria-label': label,
+        // Fires once a complete value is picked or typed; a cleared field keeps the last value.
+        onChange: (e: { target: { value: string } }) => {
+          const v = e.target.value;
+          if (!v) return;
           const parsed = new Date(
             mode === 'date'
-              ? `${text}T00:00`
+              ? `${v}T00:00`
               : mode === 'time'
-                ? `${toLocalDateString(value)}T${text}`
-                : text,
+                ? `${toLocalDateString(value)}T${v}`
+                : v,
           );
           if (!Number.isNaN(parsed.getTime())) onChange(parsed);
-          else setText(format(value));
-        }}
-        placeholder={
-          mode === 'date' ? 'YYYY-MM-DD' : mode === 'time' ? 'HH:mm' : 'YYYY-MM-DDTHH:mm'
-        }
-        accessibilityLabel={label}
-        style={s.input}
-      />
+        },
+        style: {
+          minHeight: 48,
+          boxSizing: 'border-box',
+          width: '100%',
+          border: `1px solid ${error ? colors.danger : colors.border}`,
+          borderRadius: 10,
+          padding: '0 12px',
+          fontSize: 16,
+          fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+          color: colors.text,
+          backgroundColor: colors.surface,
+          colorScheme: scheme === 'dark' ? 'dark' : 'light',
+        },
+      })}
     </Field>
   );
 }

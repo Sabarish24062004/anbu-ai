@@ -34,15 +34,17 @@ export default function AccountScreen() {
     mutationFn: async () => {
       const data = await api.exportAccount();
       const json = JSON.stringify(data, null, 2);
+      const name = `anbu-ai-export-${new Date().toISOString().slice(0, 10)}.json`;
       if (Platform.OS === 'web') {
         const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
-        globalThis.open?.(url);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = name;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 10_000);
         return;
       }
-      const file = new File(
-        Paths.cache,
-        `anbu-ai-export-${new Date().toISOString().slice(0, 10)}.json`,
-      );
+      const file = new File(Paths.cache, name);
       file.create({ overwrite: true });
       file.write(json);
       await Sharing.shareAsync(file.uri, {

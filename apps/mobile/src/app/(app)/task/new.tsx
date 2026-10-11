@@ -1,9 +1,9 @@
-import { router } from 'expo-router';
 import type { CreateTaskInput } from '@anbu/shared';
 import { TaskForm } from '@/components/forms/TaskForm';
 import { Screen } from '@/components/ui';
 import { api } from '@/lib/api';
 import { keys, useInvalidatingMutation } from '@/lib/queries';
+import { goBack } from '@/lib/navigation';
 
 export default function NewTaskScreen() {
   const create = useInvalidatingMutation(
@@ -14,7 +14,7 @@ export default function NewTaskScreen() {
     <Screen>
       <TaskForm
         submit={(input, key) => create.mutateAsync({ input, key })}
-        onSaved={() => router.back()}
+        onSaved={() => goBack('/tasks')}
       />
     </Screen>
   );

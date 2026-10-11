@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
 import type { ComponentProps } from 'react';
-import type { ColorValue } from 'react-native';
+import { Platform, type ColorValue } from 'react-native';
 import { useT } from '@/lib/session-context';
 import { useColors } from '@/theme/colors';
 
@@ -20,7 +20,13 @@ export default function TabsLayout() {
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+          ...(Platform.OS === 'web' && { height: 60 }),
+        },
+        // In the browser the default 49 px tab items clip the labels under the icons.
+        ...(Platform.OS === 'web' && { tabBarItemStyle: { height: 60 } }),
         tabBarLabelStyle: { fontSize: 12 },
         headerStyle: { backgroundColor: colors.background },
         headerTintColor: colors.text,

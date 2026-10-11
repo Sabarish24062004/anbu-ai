@@ -78,7 +78,18 @@ npm test                                # migrates the anbu_ai_test database, th
 ```bash
 npm run dev:api       # API on http://0.0.0.0:4000 (GET /health)
 npm run dev:mobile    # Expo dev server; scan the QR code with Expo Go
+npm run dev:web       # or: the same app in the browser at http://localhost:8081
 ```
+
+### In a browser
+
+`npm run dev:web` runs the app in the browser (React Native Web), shown as a phone-width column.
+Everything works except phone notifications: due reminders still appear under "Due now" on the
+Agenda. Voice works in Chrome, Edge and Firefox: the recording is converted to WAV in the browser
+(Gemini does not accept the browsers' WebM), and replies are read aloud with the browser's speech
+voices. The microphone needs `localhost` or HTTPS. The API only accepts browser requests from the
+origins in `CORS_ORIGINS` (default `http://localhost:8081`); add any other address the web app is
+served from. `npx expo export -p web` (in `apps/mobile`) builds static files for hosting.
 
 In the app: create an account, then use the Agenda, Tasks, Dates and Settings tabs. The UI is in
 Tamil by default; switch to English on the sign-in screen or in Settings. Sessions are kept in the

@@ -7,6 +7,7 @@ import { formatDate, formatTime } from '@/lib/datetime';
 import { confirm, errorMessage } from '@/lib/errors';
 import { keys, useEvent, useInvalidatingMutation } from '@/lib/queries';
 import { useSession, useT } from '@/lib/session-context';
+import { goBack } from '@/lib/navigation';
 
 export default function EventDetailScreen() {
   // `at`: the occurrence opened from the agenda (its original start), for repeating events.
@@ -20,7 +21,7 @@ export default function EventDetailScreen() {
   const remove = useInvalidatingMutation(
     () => api.deleteEvent(id),
     [keys.events],
-    () => router.back(),
+    () => goBack('/'),
   );
   const failed = complete.error ?? cancel.error ?? remove.error;
 

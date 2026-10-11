@@ -190,7 +190,9 @@ function TamilVoiceNote() {
       alive = false;
     };
   }, []);
-  return hasTamil ? null : <Text style={s.muted}>{t.noTamilVoice}</Text>;
+  return hasTamil ? null : (
+    <Text style={s.muted}>{Platform.OS === 'web' ? t.noTamilVoiceWeb : t.noTamilVoice}</Text>
+  );
 }
 
 function NotificationStatus() {

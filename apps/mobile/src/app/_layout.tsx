@@ -6,8 +6,8 @@ import {
 } from '@tanstack/react-query';
 import { SplashScreen, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
-import { AppState, Platform } from 'react-native';
+import { useEffect, useState, type ReactNode } from 'react';
+import { AppState, Platform, View } from 'react-native';
 import { ApiError } from '@/lib/http';
 import { SessionProvider, useSession } from '@/lib/session-context';
 import { useColors } from '@/theme/colors';
@@ -42,9 +42,24 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <SessionProvider>
         <StatusBar style="auto" />
-        <RootNavigator />
+        <WebFrame>
+          <RootNavigator />
+        </WebFrame>
       </SessionProvider>
     </QueryClientProvider>
+  );
+}
+
+/** On a wide browser window, show the app as a centred phone-width column; elsewhere a no-op. */
+function WebFrame({ children }: { children: ReactNode }) {
+  const colors = useColors();
+  if (Platform.OS !== 'web') return children;
+  return (
+    <View style={{ flex: 1, alignItems: 'center', backgroundColor: colors.border }}>
+      <View style={{ flex: 1, width: '100%', maxWidth: 480, backgroundColor: colors.background }}>
+        {children}
+      </View>
+    </View>
   );
 }
 
@@ -63,8 +78,15 @@ function RootNavigator() {
     if (!isLoading) void SplashScreen.hideAsync().catch(() => undefined);
   }, [isLoading]);
 
-  // The navigator is always rendered: Expo Router only finishes starting up once a navigator has
-  // mounted, so returning anything else here can leave the app stuck on the splash screen.
+  // On the web there is no splash screen, and rendering the guarded routes before the saved
+  // session is read would redirect a reloaded page (e.g. /settings) to sign-in and then to the
+  // Agenda. Reading localStorage takes a moment, so show an empty page until then.
+  if (isLoading && Platform.OS === 'web') {
+    return <View style={{ flex: 1, backgroundColor: colors.background }} />;
+  }
+
+  // On phones the navigator is always rendered: Expo Router only finishes starting up once a
+  // navigator has mounted, so returning anything else can leave the app stuck on the splash screen.
   return (
     <Stack
       screenOptions={{

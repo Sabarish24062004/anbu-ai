@@ -25,7 +25,12 @@ const VOICE_RECORDING: RecordingOptions = {
 
 export const voiceSupported = Platform.OS === 'ios' || Platform.OS === 'android';
 
-export type RecordingResult = { base64: string; mimeType: 'audio/m4a'; seconds: number };
+/** m4a on phones; WAV on the web (voice.web.ts), which Gemini accepts and WebM is not. */
+export type RecordingResult = {
+  base64: string;
+  mimeType: 'audio/m4a' | 'audio/wav';
+  seconds: number;
+};
 
 /**
  * Tap-to-talk recorder. `start` asks for the microphone, `finish` returns the recording as base64
