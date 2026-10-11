@@ -14,11 +14,14 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://10.77.224.233:4000"
+        "EXPO_PUBLIC_API_URL": "https://anbu-ai-api.onrender.com"
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://anbu-ai-api.onrender.com"
+      }
     }
   },
   "submit": {

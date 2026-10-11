@@ -9,3 +9,5 @@ process.env['DATABASE_URL'] = process.env['DATABASE_URL_TEST'];
 process.env['LOG_LEVEL'] = 'silent';
 process.env['REMINDER_WORKER_ENABLED'] = 'false';
 process.env['RATE_LIMITS_ENABLED'] = 'false';
+// A development .env may close sign-up; the tests create accounts (one test closes it itself).
+process.env['REGISTRATION_OPEN'] = 'true';
