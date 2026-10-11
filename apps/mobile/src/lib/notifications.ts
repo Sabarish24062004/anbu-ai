@@ -27,15 +27,27 @@ Notifications.setNotificationHandler({
 
 export type PermissionState = 'granted' | 'denied' | 'undetermined';
 
-async function ensureChannel() {
-  // Android needs a channel before it can ask for permission or show anything.
-  if (Platform.OS !== 'android') return;
-  await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
+let channelReady: Promise<boolean> | null = null;
+
+/**
+ * Creates the Android "reminders" channel once. Resolves to false when the platform refuses it
+ * (Expo Go on Android rejects custom channels): notifications then use the default channel,
+ * because Android drops notifications addressed to a channel that does not exist.
+ */
+function ensureChannel(): Promise<boolean> {
+  if (Platform.OS !== 'android') return Promise.resolve(false);
+  channelReady ??= Notifications.setNotificationChannelAsync(CHANNEL_ID, {
     name: 'Reminders',
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
-  });
+  })
+    .then(() => true)
+    .catch(() => false);
+  return channelReady;
 }
+
+/** The trigger's channel: ours when it exists, otherwise the default. */
+const channel = async () => ((await ensureChannel()) ? { channelId: CHANNEL_ID } : {});
 
 function toState(status: Notifications.NotificationPermissionsStatus): PermissionState {
   if (status.granted) return 'granted';
@@ -72,7 +84,7 @@ export async function snoozeLocally(content: Notifications.NotificationContent, 
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: new Date(Date.now() + minutes * 60_000),
-      channelId: CHANNEL_ID,
+      ...(await channel()),
     },
   });
 }
@@ -118,7 +130,7 @@ export async function scheduleReminders(reminders: ReminderDto[], t: Strings, la
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DATE,
         date: new Date(r.triggerAt),
-        channelId: CHANNEL_ID,
+        ...(await channel()),
       },
     });
   }
@@ -143,7 +155,7 @@ export async function scheduleDailyBrief(at: Date, plan: DayPlanDto, t: Strings,
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: at,
-      channelId: CHANNEL_ID,
+      ...(await channel()),
     },
   });
 }

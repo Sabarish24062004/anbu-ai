@@ -112,7 +112,8 @@ export function useReminderNotifications() {
     void getPermission()
       .then((state) => (state === 'undetermined' ? requestPermission() : state))
       .then((state) => (state === 'granted' ? registerForPush() : false))
-      .then(setPushActive);
+      .then(setPushActive)
+      .catch(() => setPushActive(false)); // never an unhandled rejection; local alerts still work
   }, []);
 
   const briefAtMs = briefAt.getTime();
