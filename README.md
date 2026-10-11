@@ -7,20 +7,42 @@ reminders, tasks and important dates. The product name is configurable (`APP_NAM
 Architecture and decisions: [docs/architecture.md](docs/architecture.md). Deploying and building:
 [docs/release.md](docs/release.md).
 
+## Screenshots
+
+Running as an installed app on an Android phone:
+
+| Agenda                                                                                                  | Assistant (English and Tamil)                                                                                 | Settings                                                                                                                   |
+| ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| <img src="docs/screenshots/agenda.jpg" width="240" alt="Agenda tab with today's and tomorrow's events"> | <img src="docs/screenshots/assistant.jpg" width="240" alt="Assistant chat answering in English and in Tamil"> | <img src="docs/screenshots/settings.jpg" width="240" alt="Settings tab with language, reminder and daily routine options"> |
+
+## Download (Android)
+
+**[Download the APK](https://expo.dev/artifacts/eas/Xmy6agUvlzzvCLa9g-1TJulSa-7W6bhnc0p2M-_ErvE.apk)**
+(built with EAS, `preview` profile). Open the link on the phone and allow installing from the
+browser when Android asks.
+
+The app needs an Anbu AI API to talk to; it is not a hosted service. Run the API on a computer
+(see [Running](#running)), then enter its address on the sign-in screen (Server address, e.g.
+`http://192.168.1.5:4000`). It can be changed later in Settings.
+
 ## Status
 
-| Phase                                                                 | State                                             |
-| --------------------------------------------------------------------- | ------------------------------------------------- |
-| 0. Discovery & architecture                                           | ✅ Done                                           |
-| 1. Foundation (monorepo, schema, /health, mobile ↔ API)               | ✅ Done                                           |
-| 2. Auth, events, tasks, important dates, conflicts                    | ✅ Built — needs on-device testing                |
-| 3. Reminders (worker, local notifications, due/snooze)                | ✅ Built — needs on-device testing                |
-| 4. Assistant (Gemini tool-calling, confirmations, chat tab)           | ✅ Built — needs a Gemini key to try              |
-| 5. Voice (speak to the assistant, replies read aloud)                 | ✅ Built — Tamil speech needs on-device testing   |
-| 6. Memory, day planning, morning brief                                | ✅ Built — needs on-device testing                |
-| 7. Hardening + release prep (limits, account export/delete, push, CI) | ✅ Built — see [docs/release.md](docs/release.md) |
-| 8. Skip or move one occurrence of a repeating event                   | ✅ Built                                          |
-| 9. Done/Snooze on notifications, app unit tests                       | ✅ Built                                          |
+All phases are built, and phases 2–9 have been tested on an Android phone (Expo Go and the
+installed APK). iOS has not been tested on a device yet.
+
+| Phase                                                                 | State   |
+| --------------------------------------------------------------------- | ------- |
+| 0. Discovery & architecture                                           | ✅ Done |
+| 1. Foundation (monorepo, schema, /health, mobile ↔ API)               | ✅ Done |
+| 2. Auth, events, tasks, important dates, conflicts                    | ✅ Done |
+| 3. Reminders (worker, local notifications, due/snooze)                | ✅ Done |
+| 4. Assistant (Gemini tool-calling, confirmations, chat tab)           | ✅ Done |
+| 5. Voice (speak to the assistant, replies read aloud)                 | ✅ Done |
+| 6. Memory, day planning, morning brief                                | ✅ Done |
+| 7. Hardening + release prep (limits, account export/delete, push, CI) | ✅ Done |
+| 8. Skip or move one occurrence of a repeating event                   | ✅ Done |
+| 9. Done/Snooze on notifications, app unit tests                       | ✅ Done |
+| 10. Installable Android app (EAS build, server address setting)       | ✅ Done |
 
 ## Repository layout
 
@@ -37,7 +59,8 @@ npm workspaces; run all install commands from the repository root.
 
 - Node.js ≥ 22.12 (developed on 24.14) and npm
 - PostgreSQL 16+ running locally (developed on 18)
-- Expo Go on an Android phone and/or iPhone, on the same Wi-Fi as the development computer
+- Expo Go (or the [APK](#download-android)) on an Android phone and/or iPhone, on the same Wi-Fi as
+  the development computer
 
 ## Setup
 
