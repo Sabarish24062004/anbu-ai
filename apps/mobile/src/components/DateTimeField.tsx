@@ -55,7 +55,7 @@ export function DateTimeField({
             mode={mode}
             display="compact"
             locale={localeFor(language)}
-            onChange={(_e, d) => d && onChange(d)}
+            onValueChange={(_e, d) => onChange(d)}
             accessibilityLabel={label}
           />
         </View>
@@ -69,24 +69,20 @@ export function DateTimeField({
         DateTimePickerAndroid.open({
           value,
           mode: 'time',
-          onChange: (event, time) => {
-            if (event.type === 'set' && time) onChange(time);
-          },
+          onValueChange: (_e, time) => onChange(time),
         });
         return;
       }
       DateTimePickerAndroid.open({
         value,
         mode: 'date',
-        onChange: (event, date) => {
-          if (event.type !== 'set' || !date) return;
+        // onValueChange fires only when a value is picked; dismissing does nothing.
+        onValueChange: (_e, date) => {
           if (mode === 'date') return onChange(date);
           DateTimePickerAndroid.open({
             value: date,
             mode: 'time',
-            onChange: (e2, time) => {
-              if (e2.type === 'set' && time) onChange(time);
-            },
+            onValueChange: (_e2, time) => onChange(time),
           });
         },
       });
