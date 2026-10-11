@@ -17,8 +17,8 @@ Running as an installed app on an Android phone:
 
 ## Download (Android)
 
-**[Download the APK](https://expo.dev/artifacts/eas/Xmy6agUvlzzvCLa9g-1TJulSa-7W6bhnc0p2M-_ErvE.apk)**
-(built with EAS, `preview` profile). Open the link on the phone and allow installing from the
+**[Download the APK](https://github.com/Sabarish24062004/anbu-ai/releases/latest/download/anbu-ai-v1.0.0.apk)**
+(v1.0.0, [release notes](https://github.com/Sabarish24062004/anbu-ai/releases/tag/v1.0.0); built with EAS, `preview` profile). Open the link on the phone and allow installing from the
 browser when Android asks.
 
 The app needs an Anbu AI API to talk to; it is not a hosted service. Run the API on a computer
