@@ -4,14 +4,17 @@ import {
   QueryClientProvider,
   useQueryClient,
 } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import { SplashScreen, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { AppState, Platform, View } from 'react-native';
-import { Loading } from '@/components/ui';
+import { AppState, Platform } from 'react-native';
 import { ApiError } from '@/lib/http';
 import { SessionProvider, useSession } from '@/lib/session-context';
 import { useColors } from '@/theme/colors';
+
+// Keep the splash screen up until the saved session has been read, so the sign-in screen does not
+// flash for someone who is already signed in. RootNavigator hides it explicitly.
+void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 // React Query refetches stale data on focus; on native, "focus" is the app returning to the
 // foreground (e.g. reopening the app picks up reminders changed elsewhere).
@@ -56,14 +59,12 @@ function RootNavigator() {
     if (!signedIn) queryClient.clear();
   }, [signedIn, queryClient]);
 
-  if (isLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', backgroundColor: colors.background }}>
-        <Loading />
-      </View>
-    );
-  }
+  useEffect(() => {
+    if (!isLoading) void SplashScreen.hideAsync().catch(() => undefined);
+  }, [isLoading]);
 
+  // The navigator is always rendered: Expo Router only finishes starting up once a navigator has
+  // mounted, so returning anything else here can leave the app stuck on the splash screen.
   return (
     <Stack
       screenOptions={{

@@ -6,6 +6,7 @@ import { sendJson } from './http';
 const STORAGE_KEY = 'anbu.session';
 // Refresh slightly early so a request never leaves with a token about to expire.
 const EXPIRY_MARGIN_MS = 30_000;
+const LOAD_TIMEOUT_MS = 3_000;
 
 export interface Session {
   user: UserDto;
@@ -78,7 +79,12 @@ export const sessionStore = {
 
   async load(): Promise<Session | null> {
     try {
-      const raw = await storage.get();
+      // A secure-storage read that never settles must not keep the app on its splash screen:
+      // after a few seconds, start signed out (signing in again restores the session).
+      const raw = await Promise.race([
+        storage.get(),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), LOAD_TIMEOUT_MS)),
+      ]);
       current = raw ? (JSON.parse(raw) as Session) : null;
     } catch {
       current = null;
