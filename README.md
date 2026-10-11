@@ -4,6 +4,17 @@ A Tamil-first, bilingual (Tamil / English / Tanglish) voice-powered personal ass
 reminders, tasks and important dates. The product name is configurable (`APP_NAME`, and `name` in
 `apps/mobile/app.json`).
 
+## Try it live
+
+- **Web:** **https://anbu-ai-app.onrender.com** (create an account; works on a computer or a
+  phone's browser)
+- **Android:** **[download the APK](https://github.com/Sabarish24062004/anbu-ai/releases/latest/download/anbu-ai.apk)**
+
+Both use the same hosted API and database, so one account works in both. Hosted for free
+(Render + Supabase, see [docs/hosting.md](docs/hosting.md)); if nobody has used it for a while,
+the first request can take up to a minute while the server wakes. The assistant runs on Gemini's
+free tier, so do not enter anything sensitive.
+
 Architecture and decisions: [docs/architecture.md](docs/architecture.md). Deploying and building:
 [docs/release.md](docs/release.md). Free hosting (web + Android): [docs/hosting.md](docs/hosting.md).
 
@@ -17,18 +28,18 @@ Running as an installed app on an Android phone:
 
 ## Download (Android)
 
-**[Download the APK](https://github.com/Sabarish24062004/anbu-ai/releases/latest/download/anbu-ai-v1.0.0.apk)**
-(v1.0.0, [release notes](https://github.com/Sabarish24062004/anbu-ai/releases/tag/v1.0.0); built with EAS, `preview` profile). Open the link on the phone and allow installing from the
-browser when Android asks.
+**[Download the APK](https://github.com/Sabarish24062004/anbu-ai/releases/latest/download/anbu-ai.apk)**
+(built with EAS, `preview` profile; [all releases](https://github.com/Sabarish24062004/anbu-ai/releases)).
+Open the link on the phone and allow installing from the browser when Android asks.
 
-The app needs an Anbu AI API to talk to; it is not a hosted service. Run the API on a computer
-(see [Running](#running)), then enter its address on the sign-in screen (Server address, e.g.
-`http://192.168.1.5:4000`). It can be changed later in Settings.
+The app connects to the hosted API at `https://anbu-ai-api.onrender.com`. To use your own API
+instead (see [Running](#running)), change Server address on the sign-in screen or in Settings.
 
 ## Status
 
-All phases are built, and phases 2–9 have been tested on an Android phone (Expo Go and the
-installed APK). iOS has not been tested on a device yet.
+All phases are built. Phases 2–10 have been tested on an Android phone (Expo Go and the
+installed APK), and the web app in Edge against the hosted API. iOS has not been tested on a
+device yet.
 
 | Phase                                                                 | State   |
 | --------------------------------------------------------------------- | ------- |
@@ -43,6 +54,7 @@ installed APK). iOS has not been tested on a device yet.
 | 8. Skip or move one occurrence of a repeating event                   | ✅ Done |
 | 9. Done/Snooze on notifications, app unit tests                       | ✅ Done |
 | 10. Installable Android app (EAS build, server address setting)       | ✅ Done |
+| 11. Web app (React Native Web) and free hosting (Render + Supabase)   | ✅ Done |
 
 ## Repository layout
 
