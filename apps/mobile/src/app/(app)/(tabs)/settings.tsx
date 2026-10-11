@@ -20,9 +20,9 @@ import {
   useStyles,
 } from '@/components/ui';
 import { api, fetchHealth } from '@/lib/api';
-import { getApiBaseUrl } from '@/lib/config';
 import { dateToMinutes, deviceTimezone, minutesToDate } from '@/lib/datetime';
 import { DateTimeField } from '@/components/DateTimeField';
+import { ServerAddress } from '@/components/ServerAddress';
 import { errorMessage } from '@/lib/errors';
 import { ApiError } from '@/lib/http';
 import { getPermission, requestPermission, type PermissionState } from '@/lib/notifications';
@@ -263,7 +263,7 @@ function ServerStatus() {
         {health.isFetching && <ActivityIndicator color={colors.primary} />}
         <Text style={{ color, fontSize: 15, lineHeight: 21, flexShrink: 1 }}>{text}</Text>
       </View>
-      <Text style={s.muted}>{getApiBaseUrl()}</Text>
+      <ServerAddress />
       <View style={{ marginTop: 8 }}>
         <Button
           label={t.checkAgain}

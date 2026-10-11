@@ -3,6 +3,28 @@
 Two parts ship separately: the **API** (Node + PostgreSQL, on a server you control) and the
 **mobile app** (built with EAS). Do them in this order: the app needs the API's public URL.
 
+## Install on your Android phone as an app (APK)
+
+A standalone app with its own icon, no Expo Go needed. Expo builds it in the cloud (free account).
+
+1. Create a free account at https://expo.dev/signup.
+2. In `apps/mobile`, sign in and build (the first build asks a few questions; answer **Yes** to
+   creating the EAS project and to generating a new Android keystore):
+
+   ```bash
+   cd apps/mobile
+   npx eas-cli@latest login
+   npx eas-cli@latest build --platform android --profile preview
+   ```
+
+3. When it finishes (about 10–20 minutes on the free tier) it prints a link and QR code. Open it on
+   the phone, download the APK and install it (Android asks to allow installing from the browser).
+
+The `preview` build talks to `http://10.77.224.233:4000` (set in `eas.json`). If the PC's address
+changes, change it on the sign-in screen or in Settings → Server address; no rebuild is needed.
+The API must be running on the PC (`npm run dev:api`) and the phone on the same Wi-Fi. Plain HTTP
+is allowed for this (home network) via `expo-build-properties`; a public server should use HTTPS.
+
 ## 0. Hosting on your own PC with Cloudflare Tunnel
 
 The API can run on the development PC and be reached from anywhere through a Cloudflare Tunnel:

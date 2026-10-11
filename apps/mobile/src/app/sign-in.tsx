@@ -3,6 +3,7 @@ import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Text } from 'react-native';
 import { AuthHeader } from '@/components/AuthHeader';
+import { ServerAddress } from '@/components/ServerAddress';
 import { Button, ErrorBanner, Screen, TextField, useStyles } from '@/components/ui';
 import { api } from '@/lib/api';
 import { errorMessage } from '@/lib/errors';
@@ -51,6 +52,7 @@ export default function SignInScreen() {
       <Link href="/register" replace style={[s.body, { textAlign: 'center', padding: 12 }]}>
         <Text>{t.noAccount}</Text>
       </Link>
+      <ServerAddress />
     </Screen>
   );
 }

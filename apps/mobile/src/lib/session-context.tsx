@@ -11,6 +11,7 @@ import { DEFAULT_LANGUAGE, type AuthResponse, type Language } from '@anbu/shared
 import { STRINGS, type Strings } from '@/i18n/strings';
 import { clearScheduledReminders } from './notifications';
 import { unregisterPush } from './push';
+import { loadServerAddress } from './server-address';
 import { sessionStore, type Session } from './session';
 
 interface SessionContextValue {
@@ -32,7 +33,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = sessionStore.subscribe(setSession);
-    sessionStore.load().finally(() => setLoading(false));
+    // The server address must be known before anything talks to the API.
+    void loadServerAddress()
+      .then(() => sessionStore.load())
+      .finally(() => setLoading(false));
     return () => {
       unsubscribe();
     };
